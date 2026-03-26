@@ -1,11 +1,13 @@
 import streamlit as st
 import pandas as pd
+import plotly.express as px
+import plotly.graph_objects as go
 from crewai import Crew, Process, Task
 import SOP 
 import sys
 import re
 
-# --- CLASSE POUR CAPTURER LA DISCUSSION ---
+# --- CLASSE POUR CAPTURER LA DISCUSSION DES AGENTS ---
 class StreamlitRedirect:
     def __init__(self, placeholder):
         self.placeholder = placeholder
@@ -14,105 +16,97 @@ class StreamlitRedirect:
         clean_text = re.sub(r'\x1b\[[0-9;]*[a-zA-Z]', '', text)
         self.output += clean_text
         self.placeholder.code(self.output)
-    def flush(self):
-        pass
+    def flush(self): pass
 
-st.set_page_config(page_title="S&OP Intelligent Dashboard", layout="wide", page_icon="📈")
+st.set_page_config(page_title="Dashboard S&OP Intelligent", layout="wide", page_icon="📈")
 
 # --- BARRE LATÉRALE ---
-st.sidebar.title("📖 Guide & Import")
-with st.sidebar.expander("Format Excel Requis"):
-    st.write("3 Onglets : **Demande**, **Production**, **Finance_Achats**")
+st.sidebar.title("🚀 Configuration")
+with st.sidebar.expander("📖 Format Excel Requis"):
+    st.write("- **Demande**: Produit, Marketing_Forecast, Sales_Orders")
+    st.write("- **Production**: Produit, Capacity, Stock_Level")
+    st.write("- **Finance_Achats**: Produit, Material_Cost, Margin_Unit, Supplier_LeadTime")
 
-uploaded_file = st.sidebar.file_uploader("Charger le fichier SOP_Data.xlsx", type=['xlsx'])
+uploaded_file = st.sidebar.file_uploader("Charger le fichier S&OP (.xlsx)", type=['xlsx'])
 
-# --- ZONE PRINCIPALE ---
-st.title("🏭 Pilotage Stratégique S&OP par IA")
+# --- LOGIQUE PRINCIPALE ---
+st.title("🏭 Pilotage Stratégique S&OP par IA Agentique")
 
 if uploaded_file is not None:
     try:
-        # 1. LECTURE DES DONNÉES
+        # 1. Lecture et Nettoyage des données
         xls = pd.ExcelFile(uploaded_file)
-        df_mkt = pd.read_excel(xls, 'Demande')
-        df_prod = pd.read_excel(xls, 'Production')
-        df_fin = pd.read_excel(xls, 'Finance_Achats')
+        df_mkt = pd.read_excel(xls, 'Demande'); df_mkt.columns = df_mkt.columns.str.strip()
+        df_prod = pd.read_excel(xls, 'Production'); df_prod.columns = df_prod.columns.str.strip()
+        df_fin = pd.read_excel(xls, 'Finance_Achats'); df_fin.columns = df_fin.columns.str.strip()
 
-        # 2. CALCUL DES KPIs (Partie Ingénierie)
-        total_demand = df_mkt['Marketing_Forecast'].sum()
-        total_capacity = df_prod['Capacity'].sum()
-        avg_margin = df_fin['Margin_Unit'].mean()
-        critical_leads = df_fin[df_fin['Supplier_LeadTime'] > 30].shape[0]
-
-        # 3. AFFICHAGE DES MÉTRIQUES (KPIs)
-        st.subheader("📊 Indicateurs Clés de Performance (KPIs)")
+        # 2. Section KPIs
+        st.subheader("📊 Indicateurs Clés de Performance (Analytique)")
         kpi1, kpi2, kpi3, kpi4 = st.columns(4)
         
+        total_demand = df_mkt['Marketing_Forecast'].sum()
+        total_cap = df_prod['Capacity'].sum()
+        saturation = (total_demand / total_cap) * 100
+        critical_suppliers = df_fin[df_fin['Supplier_LeadTime'] > 30].shape[0]
+
         kpi1.metric("Demande Totale", f"{total_demand} u")
-        kpi2.metric("Capacité Totale", f"{total_capacity} u", f"{total_capacity - total_demand} écart")
-        kpi3.metric("Marge Moyenne", f"{avg_margin:.0f} €")
-        kpi4.metric("Risques Achats", f"{critical_leads} alertes", delta_color="inverse")
+        kpi2.metric("Capacité Totale", f"{total_cap} u")
+        kpi3.metric("Taux de Saturation", f"{saturation:.1f} %", delta=f"{saturation-100:.1f}%", delta_color="inverse")
+        kpi4.metric("Risques Fournisseurs", f"{critical_suppliers}", "Alertes")
 
-        st.divider()
-
-        # 4. VISUALISATION GRAPHIQUE
-        col_chart1, col_chart2 = st.columns(2)
+        # 3. Visualisation Plotly
+        c1, c2 = st.columns(2)
+        with c1:
+            fig = go.Figure()
+            fig.add_trace(go.Bar(x=df_mkt['Produit'], y=df_mkt['Marketing_Forecast'], name='Demande', marker_color='#007bff'))
+            fig.add_trace(go.Bar(x=df_prod['Produit'], y=df_prod['Capacity'], name='Capacité', marker_color='#ff7f0e'))
+            fig.update_layout(title="Équilibre Offre vs Demande", barmode='group')
+            st.plotly_chart(fig, use_container_width=True)
         
-        with col_chart1:
-            st.write("### 📈 Offre vs Demande par Produit")
-            # Fusion pour comparer demande et capacité
-            comparison_df = df_mkt.merge(df_prod, on='Produit')
-            st.bar_chart(comparison_df.set_index('Produit')[['Marketing_Forecast', 'Capacity']])
-
-        with col_chart2:
-            st.write("### 💰 Rentabilité par Produit")
-            st.line_chart(df_fin.set_index('Produit')['Margin_Unit'])
+        with c2:
+            fig2 = px.pie(df_fin, values='Margin_Unit', names='Produit', title="Répartition des Marges Unitaires", hole=0.4)
+            st.plotly_chart(fig2, use_container_width=True)
 
         st.divider()
 
-        # 5. ZONE IA
-        col_cmd, col_res = st.columns([1, 1])
+        # 4. Orchestration IA
+        col_ia_cmd, col_ia_res = st.columns([1, 1])
 
-        with col_cmd:
-            st.subheader("🤖 Orchestration IA")
-            if st.button("🚀 Lancer l'Analyse des Agents"):
-                terminal_placeholder = st.empty()
-                redir = StreamlitRedirect(terminal_placeholder)
+        with col_ia_cmd:
+            st.subheader("🤖 Intelligence Agentique")
+            if st.button("🚀 Lancer l'Orchestration des Agents"):
+                log_area = st.empty()
+                redir = StreamlitRedirect(log_area)
                 old_stdout = sys.stdout
                 sys.stdout = redir
 
                 try:
-                    # On passe les données en texte aux agents
-                    txt_mkt = df_mkt.to_string()
-                    txt_prod = df_prod.to_string()
-                    txt_fin = df_fin.to_string()
+                    # Conversion des données en texte pour l'IA
+                    txt_mkt = df_mkt.to_string(); txt_prod = df_prod.to_string(); txt_fin = df_fin.to_string()
 
-                    t1 = Task(description=f"Analyse DEMANDE : {txt_mkt}", expected_output="Note marketing", agent=SOP.marketing)
-                    t2 = Task(description=f"Valide volumes : {txt_mkt}", expected_output="Ventes validées", agent=SOP.sales)
-                    t3 = Task(description=f"Compare PROD : {txt_prod}. Calcule le taux d'utilisation.", expected_output="Alerte goulots", agent=SOP.supply)
-                    t4 = Task(description=f"Analyse ACHATS : {txt_fin}", expected_output="Risques délais", agent=SOP.purchasing)
-                    t5 = Task(description=f"Calcul FINANCE : {txt_fin}", expected_output="Marge totale", agent=SOP.finance)
-                    t6 = Task(description="Rédige le Rapport Final PIC complet en français.", expected_output="Rapport S&OP Final", agent=SOP.orchestrator)
+                    t1 = Task(description=f"Analyse Demande: {txt_mkt}", expected_output="Rapport demande", agent=SOP.marketing)
+                    t2 = Task(description="Valide les volumes finaux.", expected_output="Volumes validés", agent=SOP.sales)
+                    t3 = Task(description=f"Vérifie Production: {txt_prod}", expected_output="Faisabilité", agent=SOP.supply)
+                    t4 = Task(description=f"Vérifie Achats: {txt_fin}", expected_output="Risques délais", agent=SOP.purchasing)
+                    t5 = Task(description=f"Calcule Finance: {txt_fin}", expected_output="Marge totale", agent=SOP.finance)
+                    t6 = Task(description="Rédige le Rapport Stratégique S&OP Final complet et structuré en français.", 
+                              expected_output="Rapport PIC Final", agent=SOP.orchestrator)
 
-                    equipe = Crew(
-                        agents=[SOP.marketing, SOP.sales, SOP.supply, SOP.purchasing, SOP.finance, SOP.orchestrator],
-                        tasks=[t1, t2, t3, t4, t5, t6],
-                        process=Process.sequential
-                    )
+                    crew = Crew(agents=[SOP.marketing, SOP.sales, SOP.supply, SOP.purchasing, SOP.finance, SOP.orchestrator],
+                                tasks=[t1, t2, t3, t4, t5, t6], process=Process.sequential)
 
-                    resultat = equipe.kickoff()
-                    st.session_state['resultat_sop'] = str(resultat)
+                    resultat = crew.kickoff()
+                    st.session_state['res_sop'] = str(resultat)
                 finally:
                     sys.stdout = old_stdout
 
-        with col_res:
+        with col_ia_res:
             st.subheader("📋 Rapport de Décision Final")
-            if 'resultat_sop' in st.session_state:
-                st.success("Analyse terminée !")
-                st.markdown(st.session_state['resultat_sop'])
-            else:
-                st.info("Lancez l'IA pour obtenir le plan d'action stratégique.")
+            if 'res_sop' in st.session_state:
+                st.markdown(st.session_state['res_sop'])
+                st.download_button("📥 Télécharger le Plan (.txt)", st.session_state['res_sop'], "Rapport_SOP.txt")
 
     except Exception as e:
-        st.error(f"Erreur de traitement : {e}")
+        st.error(f"Erreur : {e}")
 else:
-    st.info("👋 Veuillez importer votre fichier Excel pour générer le dashboard et l'analyse.")
+    st.info("👋 Veuillez charger votre fichier Excel pour activer le Dashboard.")
