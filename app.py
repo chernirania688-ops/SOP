@@ -26,13 +26,10 @@ with st.sidebar.expander("Cliquez pour voir le format Excel requis", expanded=Fa
     st.write("Votre fichier doit avoir **3 onglets** :")
     
     st.info("**1. Demande**")
-    st.write("- Colonnes : `Produit`, `Marketing_Forecast`, `Sales_Orders` ")
-    
+   
     st.info("**2. Production**")
-    st.write("- Colonnes : `Produit`, `Capacity`, `Stock_Level` ")
     
     st.info("**3. Finance_Achats**")
-    st.write("- Colonnes : `Produit`, `Material_Cost`, `Margin_Unit`, `Supplier_LeadTime` ")
 
 st.sidebar.divider()
 
