@@ -17,90 +17,102 @@ class StreamlitRedirect:
     def flush(self):
         pass
 
-st.set_page_config(page_title="IA Agentique S&OP Pro", layout="wide", page_icon="📊")
+st.set_page_config(page_title="S&OP Intelligent Dashboard", layout="wide", page_icon="📈")
 
-# --- BARRE LATÉRALE : GUIDE ET IMPORTATION ---
-st.sidebar.title("📖 Guide de Structure")
+# --- BARRE LATÉRALE ---
+st.sidebar.title("📖 Guide & Import")
+with st.sidebar.expander("Format Excel Requis"):
+    st.write("3 Onglets : **Demande**, **Production**, **Finance_Achats**")
 
-with st.sidebar.expander("Cliquez pour voir le format Excel requis", expanded=False):
-    st.write("Votre fichier doit avoir **3 onglets** :")
-    
-    st.info("**1. Demande**")
-   
-    st.info("**2. Production**")
-    
-    st.info("**3. Finance_Achats**")
-
-st.sidebar.divider()
-
-st.sidebar.header("📂 Importation")
 uploaded_file = st.sidebar.file_uploader("Charger le fichier SOP_Data.xlsx", type=['xlsx'])
 
 # --- ZONE PRINCIPALE ---
-st.title("🏭 Pilotage Stratégique S&OP")
-st.markdown("### Orchestration Multi-Agents en temps réel")
+st.title("🏭 Pilotage Stratégique S&OP par IA")
 
 if uploaded_file is not None:
     try:
+        # 1. LECTURE DES DONNÉES
         xls = pd.ExcelFile(uploaded_file)
+        df_mkt = pd.read_excel(xls, 'Demande')
+        df_prod = pd.read_excel(xls, 'Production')
+        df_fin = pd.read_excel(xls, 'Finance_Achats')
+
+        # 2. CALCUL DES KPIs (Partie Ingénierie)
+        total_demand = df_mkt['Marketing_Forecast'].sum()
+        total_capacity = df_prod['Capacity'].sum()
+        avg_margin = df_fin['Margin_Unit'].mean()
+        critical_leads = df_fin[df_fin['Supplier_LeadTime'] > 30].shape[0]
+
+        # 3. AFFICHAGE DES MÉTRIQUES (KPIs)
+        st.subheader("📊 Indicateurs Clés de Performance (KPIs)")
+        kpi1, kpi2, kpi3, kpi4 = st.columns(4)
         
-        # Vérification des noms d'onglets
-        required_sheets = ['Demande', 'Production', 'Finance_Achats']
-        found_sheets = xls.sheet_names
+        kpi1.metric("Demande Totale", f"{total_demand} u")
+        kpi2.metric("Capacité Totale", f"{total_capacity} u", f"{total_capacity - total_demand} écart")
+        kpi3.metric("Marge Moyenne", f"{avg_margin:.0f} €")
+        kpi4.metric("Risques Achats", f"{critical_leads} alertes", delta_color="inverse")
+
+        st.divider()
+
+        # 4. VISUALISATION GRAPHIQUE
+        col_chart1, col_chart2 = st.columns(2)
         
-        if all(sheet in found_sheets for sheet in required_sheets):
-            st.sidebar.success("✅ Structure du fichier conforme")
-            
-            # Aperçu des données
-            onglet = st.sidebar.selectbox("Visualiser les données importées", found_sheets)
-            st.sidebar.write(pd.read_excel(xls, onglet))
+        with col_chart1:
+            st.write("### 📈 Offre vs Demande par Produit")
+            # Fusion pour comparer demande et capacité
+            comparison_df = df_mkt.merge(df_prod, on='Produit')
+            st.bar_chart(comparison_df.set_index('Produit')[['Marketing_Forecast', 'Capacity']])
 
-            # Extraction pour les agents
-            data_mkt = pd.read_excel(xls, 'Demande').to_string()
-            data_prod = pd.read_excel(xls, 'Production').to_string()
-            data_fin = pd.read_excel(xls, 'Finance_Achats').to_string()
+        with col_chart2:
+            st.write("### 💰 Rentabilité par Produit")
+            st.line_chart(df_fin.set_index('Produit')['Margin_Unit'])
 
-            col_cmd, col_res = st.columns([1, 1])
+        st.divider()
 
-            with col_cmd:
-                st.subheader("⚙️ Panneau de Contrôle")
-                if st.button("🚀 Lancer le Cycle S&OP"):
-                    st.info("🤖 **Discussion des agents en direct :**")
-                    terminal_placeholder = st.empty()
-                    redir = StreamlitRedirect(terminal_placeholder)
-                    old_stdout = sys.stdout
-                    sys.stdout = redir
+        # 5. ZONE IA
+        col_cmd, col_res = st.columns([1, 1])
 
-                    try:
-                        t1 = Task(description=f"Analyse DEMANDE : {data_mkt}", expected_output="Analyse marketing", agent=SOP.marketing)
-                        t2 = Task(description=f"Valide volumes : {data_mkt}", expected_output="Ventes validées", agent=SOP.sales)
-                        t3 = Task(description=f"Compare PROD : {data_prod}", expected_output="Saturation usine", agent=SOP.supply)
-                        t4 = Task(description=f"Analyse ACHATS : {data_fin}", expected_output="Risques supply", agent=SOP.purchasing)
-                        t5 = Task(description=f"Calcul FINANCE : {data_fin}", expected_output="Bilan financier", agent=SOP.finance)
-                        t6 = Task(description="Rédige le Rapport Final PIC complet en français.", expected_output="Rapport S&OP Final", agent=SOP.orchestrator)
+        with col_cmd:
+            st.subheader("🤖 Orchestration IA")
+            if st.button("🚀 Lancer l'Analyse des Agents"):
+                terminal_placeholder = st.empty()
+                redir = StreamlitRedirect(terminal_placeholder)
+                old_stdout = sys.stdout
+                sys.stdout = redir
 
-                        equipe = Crew(
-                            agents=[SOP.marketing, SOP.sales, SOP.supply, SOP.purchasing, SOP.finance, SOP.orchestrator],
-                            tasks=[t1, t2, t3, t4, t5, t6],
-                            process=Process.sequential
-                        )
+                try:
+                    # On passe les données en texte aux agents
+                    txt_mkt = df_mkt.to_string()
+                    txt_prod = df_prod.to_string()
+                    txt_fin = df_fin.to_string()
 
-                        resultat = equipe.kickoff()
-                        st.session_state['resultat_sop'] = str(resultat)
-                    finally:
-                        sys.stdout = old_stdout
+                    t1 = Task(description=f"Analyse DEMANDE : {txt_mkt}", expected_output="Note marketing", agent=SOP.marketing)
+                    t2 = Task(description=f"Valide volumes : {txt_mkt}", expected_output="Ventes validées", agent=SOP.sales)
+                    t3 = Task(description=f"Compare PROD : {txt_prod}. Calcule le taux d'utilisation.", expected_output="Alerte goulots", agent=SOP.supply)
+                    t4 = Task(description=f"Analyse ACHATS : {txt_fin}", expected_output="Risques délais", agent=SOP.purchasing)
+                    t5 = Task(description=f"Calcul FINANCE : {txt_fin}", expected_output="Marge totale", agent=SOP.finance)
+                    t6 = Task(description="Rédige le Rapport Final PIC complet en français.", expected_output="Rapport S&OP Final", agent=SOP.orchestrator)
 
-            with col_res:
-                st.subheader("📋 Rapport Stratégique Final")
-                if 'resultat_sop' in st.session_state:
-                    st.success("Analyse terminée !")
-                    st.markdown(st.session_state['resultat_sop'])
-                else:
-                    st.write("Le rapport final s'affichera ici.")
-        else:
-            st.error(f"❌ Onglets manquants. Trouvé : {found_sheets}. Requis : {required_sheets}")
+                    equipe = Crew(
+                        agents=[SOP.marketing, SOP.sales, SOP.supply, SOP.purchasing, SOP.finance, SOP.orchestrator],
+                        tasks=[t1, t2, t3, t4, t5, t6],
+                        process=Process.sequential
+                    )
+
+                    resultat = equipe.kickoff()
+                    st.session_state['resultat_sop'] = str(resultat)
+                finally:
+                    sys.stdout = old_stdout
+
+        with col_res:
+            st.subheader("📋 Rapport de Décision Final")
+            if 'resultat_sop' in st.session_state:
+                st.success("Analyse terminée !")
+                st.markdown(st.session_state['resultat_sop'])
+            else:
+                st.info("Lancez l'IA pour obtenir le plan d'action stratégique.")
 
     except Exception as e:
-        st.error(f"⚠️ Erreur : {e}")
+        st.error(f"Erreur de traitement : {e}")
 else:
-    st.info("👋 Veuillez importer votre fichier Excel dans la barre latérale pour commencer. Assurez-vous de respecter les noms des 3 onglets (Demande, Production, Finance_Achats).")
+    st.info("👋 Veuillez importer votre fichier Excel pour générer le dashboard et l'analyse.")
