@@ -42,19 +42,30 @@ if uploaded_file is not None:
                 t4 = Task(description=f"Vérifie les SUPPLIER_LEADTIME dans : {data_fin}. Quels produits risquent une rupture ?", 
                           expected_output="Analyse des risques achats.", agent=SOP.purchasing)
 
-                # Tâche 5 : Utilise l'onglet FINANCE_ACHATS (Partie Finance)
-                t5 = Task(description=f"Utilise MARGIN_UNIT dans : {data_fin} pour calculer le profit total du plan validé.", 
-                          expected_output="Bilan financier (Marge totale).", agent=SOP.finance)
+                # Tâche Finance plus précise
+t5 = Task(
+    description=f"""Calcule l'impact financier total en utilisant les volumes de l'agent Sales 
+    et les données de Finance_Achats : {data_fin}.
+    CALCUL OBLIGATOIRE : (Volume Alpha_Phone_15 * 350) + (Volume Alpha_Phone_14 * 150) + ... 
+    Donne le Chiffre d'Affaires total et la Marge Totale Globale.""", 
+    expected_output="Bilan financier chiffré et détaillé.", 
+    agent=SOP.finance
+)
 
-                # Tâche 6 : SYNTHÈSE TOTALE (L'Orchestrateur)
-                t6 = Task(description="""Rédige le rapport S&OP final. 
-                          Tu DOIS inclure ces 3 points obligatoirement :
-                          1. Volumes validés (issus de l onglet Demande)
-                          2. Alertes Capacités (issues de l onglet Production)
-                          3. Rentabilité et Risques Achats (issus de l onglet Finance_Achats)
-                          REMARQUE : Ne parle pas de musique ou de cinéma, reste sur les données techniques.""", 
-                          expected_output="Plan Industriel et Commercial (PIC) Final.", agent=SOP.orchestrator)
-
+# Tâche Orchestrateur avec un Template imposé
+t6 = Task(
+    description=f"""Rédige le Rapport Stratégique S&OP Final en suivant EXACTEMENT ce plan :
+    1. EXÉCUTIF SUMMARY : Résumé de la situation en 3 phrases.
+    2. ANALYSE DE LA DEMANDE : Tableau des volumes validés vs prévisions.
+    3. CONTRAINTES OPÉRATIONNELLES : Liste des goulots (Production) et risques (Achats). 
+       Calcule le taux d'utilisation de l'usine (Demande / Capacité).
+    4. BILAN FINANCIER : Chiffre d'Affaires total et Marge bénéficiaire totale.
+    5. PLAN D'ACTION (PIC) : Décisions précises pour le mois prochain.
+    
+    Sois factuel, utilise des puces et des tableaux Markdown.""", 
+    expected_output="Rapport S&OP Expert de haute qualité.", 
+    agent=SOP.orchestrator
+)
                 # Exécution
                 equipe = Crew(
                     agents=[SOP.marketing, SOP.sales, SOP.supply, SOP.purchasing, SOP.finance, SOP.orchestrator],
