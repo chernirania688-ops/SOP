@@ -1,20 +1,30 @@
 import streamlit as st
 import pandas as pd
 from crewai import Crew, Process, Task
-import SOP  # Importation des agents depuis SOP.py
+import SOP 
+import sys
+import re
+
+# --- CLASSE TECHNIQUE POUR REDIRIGER LE TERMINAL VERS STREAMLIT ---
+class StreamlitRedirect:
+    def __init__(self, placeholder):
+        self.placeholder = placeholder
+        self.output = ""
+
+    def write(self, text):
+        # Nettoyage des codes couleurs du terminal (ANSI) pour que le texte soit propre
+        clean_text = re.sub(r'\x1b\[[0-9;]*[a-zA-Z]', '', text)
+        self.output += clean_text
+        # On affiche le texte dans un bloc de type "code" pour garder le format terminal
+        self.placeholder.code(self.output)
+
+    def flush(self):
+        pass
 
 st.set_page_config(page_title="IA Agentique S&OP Pro", layout="wide", page_icon="📊")
 
-# --- STYLE ---
-st.markdown("""
-    <style>
-    .main { background-color: #f8f9fa; }
-    .stButton>button { background-color: #28a745; color: white; font-weight: bold; }
-    </style>
-    """, unsafe_allow_html=True)
-
 st.title("🏭 Pilotage Stratégique S&OP")
-st.markdown("### Orchestration Multi-Agents & Optimisation de la Performance")
+st.markdown("### Orchestration Multi-Agents en temps réel")
 
 # --- BARRE LATÉRALE ---
 st.sidebar.header("📂 Gestion des Données")
@@ -22,54 +32,40 @@ uploaded_file = st.sidebar.file_uploader("Charger le fichier SOP_Data.xlsx", typ
 
 if uploaded_file is not None:
     try:
-        # 1. Lecture du fichier
         xls = pd.ExcelFile(uploaded_file)
-        
-        # 2. Aperçu des onglets
         onglet = st.sidebar.selectbox("Visualiser les données", xls.sheet_names)
-        df_preview = pd.read_excel(xls, onglet)
-        st.sidebar.write(df_preview)
+        st.sidebar.write(pd.read_excel(xls, onglet))
 
-        # 3. Extraction des données pour les agents
+        # Extraction des données
         data_mkt = pd.read_excel(xls, 'Demande').to_string()
         data_prod = pd.read_excel(xls, 'Production').to_string()
         data_fin = pd.read_excel(xls, 'Finance_Achats').to_string()
 
         # --- ZONE CENTRALE ---
-        col_cmd, col_res = st.columns([1, 2])
+        col_cmd, col_res = st.columns([1, 1])
 
         with col_cmd:
-            st.success("✅ Fichier Excel prêt")
-            if st.button("🚀 Générer le Rapport S&OP"):
-                with st.spinner("🧠 Collaboration des agents en cours..."):
-                    
-                    # --- DÉFINITION DES TÂCHES AMÉLIORÉES (NIVEAU EXPERT) ---
-                    
-                    t1 = Task(description=f"Analyse DEMANDE : {data_mkt}. Liste les volumes par produit.", 
-                              expected_output="Résumé précis de la demande.", agent=SOP.marketing)
-                    
-                    t2 = Task(description=f"Valide les volumes de vente finaux à partir de : {data_mkt}.", 
-                              expected_output="Chiffres de ventes validés.", agent=SOP.sales)
+            st.subheader("⚙️ Panneau de Contrôle")
+            if st.button("🚀 Lancer le Cycle S&OP"):
+                st.info("🤖 **Discussion des agents en direct :**")
+                
+                # Zone où la discussion va défiler
+                terminal_placeholder = st.empty()
+                
+                # Activation de la redirection
+                redir = StreamlitRedirect(terminal_placeholder)
+                old_stdout = sys.stdout
+                sys.stdout = redir
 
-                    t3 = Task(description=f"Compare ventes vs PRODUCTION : {data_prod}. Calcule le TAUX D'UTILISATION (Demande/Capacité).", 
-                              expected_output="Analyse de saturation usine.", agent=SOP.supply)
+                try:
+                    # Définition des tâches (on utilise les agents de SOP.py)
+                    t1 = Task(description=f"Analyse DEMANDE : {data_mkt}", expected_output="Analyse marketing", agent=SOP.marketing)
+                    t2 = Task(description=f"Valide volumes : {data_mkt}", expected_output="Ventes validées", agent=SOP.sales)
+                    t3 = Task(description=f"Compare PROD : {data_prod}", expected_output="Saturation usine", agent=SOP.supply)
+                    t4 = Task(description=f"Analyse ACHATS : {data_fin}", expected_output="Risques supply", agent=SOP.purchasing)
+                    t5 = Task(description=f"Calcul FINANCE : {data_fin}", expected_output="Bilan financier", agent=SOP.finance)
+                    t6 = Task(description="Rédige le Rapport Final PIC.", expected_output="Rapport S&OP Final", agent=SOP.orchestrator)
 
-                    t4 = Task(description=f"Analyse ACHATS : {data_fin}. Alerte sur les délais > 30 jours.", 
-                              expected_output="Rapport de risques supply.", agent=SOP.purchasing)
-
-                    t5 = Task(description=f"Calcul FINANCE : Utilise {data_fin}. CALCULE : (Volume x Marge unitaire) pour chaque produit. Donne le PROFIT TOTAL.", 
-                              expected_output="Bilan financier chiffré.", agent=SOP.finance)
-
-                    t6 = Task(description=f"""Rédige le Rapport Stratégique S&OP Final en suivant ce plan :
-                              1. EXÉCUTIF SUMMARY (3 phrases)
-                              2. TABLEAU DE LA DEMANDE (Volumes validés)
-                              3. ANALYSE CAPACITÉ (Taux d'utilisation et Goulots)
-                              4. PERFORMANCE FINANCIÈRE (Profit total calculé)
-                              5. PLAN D'ACTION (3 décisions clés)
-                              Utilise un format professionnel avec des titres et du gras.""", 
-                              expected_output="Rapport S&OP de haute qualité.", agent=SOP.orchestrator)
-
-                    # Exécution du Crew
                     equipe = Crew(
                         agents=[SOP.marketing, SOP.sales, SOP.supply, SOP.purchasing, SOP.finance, SOP.orchestrator],
                         tasks=[t1, t2, t3, t4, t5, t6],
@@ -78,22 +74,20 @@ if uploaded_file is not None:
 
                     resultat = equipe.kickoff()
                     st.session_state['resultat_sop'] = str(resultat)
+                
+                finally:
+                    # On remet le terminal à la normale
+                    sys.stdout = old_stdout
 
         with col_res:
-            st.subheader("📋 Rapport de Décision")
+            st.subheader("📋 Rapport Stratégique Final")
             if 'resultat_sop' in st.session_state:
+                st.success("Analyse terminée !")
                 st.markdown(st.session_state['resultat_sop'])
-                st.download_button("📥 Télécharger le Plan PIC", st.session_state['resultat_sop'], "Rapport_SOP_Expert.txt")
             else:
-                st.info("Cliquez sur le bouton vert pour lancer l'analyse.")
+                st.write("Le rapport final s'affichera ici après la discussion des agents.")
 
     except Exception as e:
-        # C'est ce bloc 'except' qui manquait dans votre code précédent !
-        st.error(f"⚠️ Erreur système : {e}")
-        st.warning("Assurez-vous que votre fichier contient les onglets : Demande, Production, Finance_Achats")
-
+        st.error(f"⚠️ Erreur : {e}")
 else:
-    st.info("👋 Bienvenue ! Veuillez importer votre fichier Excel dans la barre latérale pour démarrer le cycle S&OP.")
-
-st.divider()
-st.caption("Projet PFA - Orchestration Agentic AI - Propulsé par Groq & CrewAI")
+    st.info("👋 Importez votre fichier Excel pour commencer.")
