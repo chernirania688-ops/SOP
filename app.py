@@ -44,7 +44,7 @@ if uploaded_file is not None:
         st.subheader("📊 Indicateurs Clés de Performance (Analytique)")
         kpi1, kpi2, kpi3, kpi4 = st.columns(4)
         
-        total_demand = df_mkt['Marketing_Forecast'].sum()
+        total_demand = df_mkt['Forecast'].sum()
         total_cap = df_prod['Capacity'].sum()
         saturation = (total_demand / total_cap) * 100
         critical_suppliers = df_fin[df_fin['Supplier_LeadTime'] > 30].shape[0]
