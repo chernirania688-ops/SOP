@@ -40,19 +40,23 @@ if uploaded_file is not None:
         df_prod = pd.read_excel(xls, 'Production'); df_prod.columns = df_prod.columns.str.strip()
         df_fin = pd.read_excel(xls, 'Finance_Achats'); df_fin.columns = df_fin.columns.str.strip()
 
-        # 2. Section KPIs
+       # --- SECTION KPI SÉCURISÉE ---
         st.subheader("📊 Indicateurs Clés de Performance (Analytique)")
-        kpi1, kpi2, kpi3, kpi4 = st.columns(4)
         
-        total_demand = df_mkt['Forecast'].sum()
-        total_cap = df_prod['Capacity'].sum()
-        saturation = (total_demand / total_cap) * 100
-        critical_suppliers = df_fin[df_fin['Supplier_LeadTime'] > 30].shape[0]
-
-        kpi1.metric("Demande Totale", f"{total_demand} u")
-        kpi2.metric("Capacité Totale", f"{total_cap} u")
-        kpi3.metric("Taux de Saturation", f"{saturation:.1f} %", delta=f"{saturation-100:.1f}%", delta_color="inverse")
-        kpi4.metric("Risques Fournisseurs", f"{critical_suppliers}", "Alertes")
+        # On vérifie si les colonnes existent avant de calculer
+        if 'Marketing_Forecast' in df_mkt.columns and 'Capacity' in df_prod.columns:
+            total_demand = df_mkt['Marketing_Forecast'].sum()
+            total_cap = df_prod['Capacity'].sum()
+            saturation = (total_demand / total_cap) * 100 if total_cap > 0 else 0
+            
+            kpi1, kpi2, kpi3 = st.columns(3)
+            kpi1.metric("Demande Totale", f"{total_demand} u")
+            kpi2.metric("Capacité Totale", f"{total_cap} u")
+            kpi3.metric("Taux de Saturation", f"{saturation:.1f} %")
+        else:
+            st.error("❌ Erreur : Colonne 'Marketing_Forecast' ou 'Capacity' introuvable dans l'Excel.")
+            st.write("Colonnes présentes dans Demande :", df_mkt.columns.tolist())
+            st.write("Colonnes présentes dans Production :", df_prod.columns.tolist())
 
         # 3. Visualisation Plotly
         c1, c2 = st.columns(2)
