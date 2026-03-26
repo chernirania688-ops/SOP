@@ -56,21 +56,22 @@ purchasing = Agent(
 )
 
 finance = Agent(
-    role='Contrôleur de Gestion',
-    goal='Calculer la marge brute totale du plan.',
-    backstory='Tu calcules la rentabilité du plan S&OP. Réponds toujours en français.',
-    llm=cerveau_local,
-    verbose=True
+    role='Contrôleur de Gestion Industriel',
+    goal='Calculer la rentabilité financière globale (Volume x Marge).',
+    backstory="""Tu es un expert en calcul de coûts. Tu ne te contentes pas d'additionner les marges unitaires. 
+    Tu multiplies CHAQUE volume validé par sa marge unitaire pour donner le profit total en euros. 
+    Tu es très précis avec les chiffres.""",
+    llm=cerveau_local, verbose=True
 )
 
 orchestrator = Agent(
-    role='Directeur S&OP',
-    goal='Créer la synthèse finale équilibrée entre Vente, Production et Finance.',
-    backstory='Arbitre final pour le consensus. Réponds toujours en français.',
-    llm=cerveau_local,
-    verbose=True
+    role='Directeur S&OP (COO)',
+    goal='Piloter la performance globale et valider le Plan Industriel et Commercial (PIC).',
+    backstory="""Tu es le garant de la stratégie. Ton rapport final doit être structuré, 
+    professionnel et inclure des indicateurs clés (KPIs). Tu arbitres les conflits en favorisant 
+    les produits à plus forte marge quand la capacité manque.""",
+    llm=cerveau_local, verbose=True
 )
-
 # Empêche l'exécution automatique lors de l'import
 if __name__ == "__main__":
     print("Le module SOP est prêt.")
