@@ -23,7 +23,7 @@ st.set_page_config(page_title="Dashboard S&OP Intelligent", layout="wide", page_
 # --- BARRE LATÉRALE ---
 st.sidebar.title("🚀 Configuration")
 with st.sidebar.expander("📖 Format Excel Requis"):
-    st.write("- **Demande**: Produit, Marketing_Forecast, Sales_Orders")
+    st.write("- **Demande**: Produit, Forecast, Sales_Orders")
     st.write("- **Production**: Produit, Capacity, Stock_Level")
     st.write("- **Finance_Achats**: Produit, Material_Cost, Margin_Unit, Supplier_LeadTime")
 
