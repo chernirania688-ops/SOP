@@ -48,7 +48,7 @@ if uploaded_file is not None:
 
         # 2. KPIs ANALYTIQUES
         st.subheader("📊 Indicateurs Clés de Performance (Situation Initiale)")
-        total_demand = df_mkt['Marketing_Forecast'].sum()
+        total_demand = df_mkt['Forecast'].sum()
         total_capacity = df_prod['Capacity'].sum()
         saturation = (total_demand / total_capacity) * 100 if total_capacity > 0 else 0
         alertes_achats = df_fin[df_fin['Supplier_LeadTime'] > 30].shape[0]
@@ -63,7 +63,7 @@ if uploaded_file is not None:
         col_v1, col_v2 = st.columns(2)
         with col_v1:
             fig_comp = go.Figure()
-            fig_comp.add_trace(go.Bar(x=df_mkt['Produit'], y=df_mkt['Marketing_Forecast'], name='Demande', marker_color='#007bff'))
+            fig_comp.add_trace(go.Bar(x=df_mkt['Produit'], y=df_mkt['Forecast'], name='Demande', marker_color='#007bff'))
             fig_comp.add_trace(go.Bar(x=df_prod['Produit'], y=df_prod['Capacity'], name='Capacité', marker_color='#ff7f0e'))
             fig_comp.update_layout(title="Équilibre Offre vs Demande par Produit", barmode='group', height=350)
             st.plotly_chart(fig_comp, use_container_width=True)
