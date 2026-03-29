@@ -1,13 +1,11 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
 from crewai import Crew, Process, Task
 import SOP 
 import sys
 import re
 
-# --- CLASSE POUR CAPTURER LA DISCUSSION DES AGENTS ---
+# --- CLASSE POUR CAPTURER LA DISCUSSION ---
 class StreamlitRedirect:
     def __init__(self, placeholder):
         self.placeholder = placeholder
@@ -18,96 +16,96 @@ class StreamlitRedirect:
         self.placeholder.code(self.output)
     def flush(self): pass
 
-st.set_page_config(page_title="Dashboard S&OP Intelligent", layout="wide", page_icon="📈")
+st.set_page_config(page_title="S&OP Strategy Simulator", layout="wide", page_icon="🧪")
+
+st.title("🏭 Pilotage Stratégique & Simulateur S&OP")
+st.markdown("### Orchestration Multi-Agents avec Gestion d'Événements Imprévus")
 
 # --- BARRE LATÉRALE ---
-st.sidebar.title("🚀 Configuration")
-with st.sidebar.expander("📖 Format Excel Requis"):
-    st.write("- **Demande**: Produit, Forecast, Sales_Orders")
-    st.write("- **Production**: Produit, Capacity, Stock_Level")
-    st.write("- **Finance_Achats**: Produit, Material_Cost, Margin_Unit, Supplier_LeadTime")
-
-uploaded_file = st.sidebar.file_uploader("Charger le fichier S&OP (.xlsx)", type=['xlsx'])
-
-# --- LOGIQUE PRINCIPALE ---
-st.title("🏭 Pilotage Stratégique S&OP par IA Agentique")
+st.sidebar.header("📂 1. Données Source")
+uploaded_file = st.sidebar.file_uploader("Charger SOP_Data.xlsx", type=['xlsx'])
 
 if uploaded_file is not None:
     try:
-        # 1. Lecture et Nettoyage des données
         xls = pd.ExcelFile(uploaded_file)
-        df_mkt = pd.read_excel(xls, 'Demande'); df_mkt.columns = df_mkt.columns.str.strip()
-        df_prod = pd.read_excel(xls, 'Production'); df_prod.columns = df_prod.columns.str.strip()
-        df_fin = pd.read_excel(xls, 'Finance_Achats'); df_fin.columns = df_fin.columns.str.strip()
+        data_mkt = pd.read_excel(xls, 'Demande').to_string()
+        data_prod = pd.read_excel(xls, 'Production').to_string()
+        data_fin = pd.read_excel(xls, 'Finance_Achats').to_string()
+        st.sidebar.success("✅ Données chargées")
 
-    # 2. Section KPIs
-        st.subheader("📊 Indicateurs Clés de Performance (Analytique)")
-        kpi1, kpi2, kpi3, kpi4 = st.columns(4)
+        # --- ZONE DE SÉLECTION DU SCÉNARIO (LA NOUVEAUTÉ) ---
+        st.subheader("🎭 2. Paramétrage du Scénario")
         
-        total_demand = df_mkt['Forecast'].sum()
-        total_cap = df_prod['Capacity'].sum()
-        saturation = (total_demand / total_cap) * 100
-        critical_suppliers = df_fin[df_fin['Supplier_LeadTime'] > 30].shape[0]
-
-        kpi1.metric("Demande Totale", f"{total_demand} u")
-        kpi2.metric("Capacité Totale", f"{total_cap} u")
-        kpi3.metric("Taux de Saturation", f"{saturation:.1f} %", delta=f"{saturation-100:.1f}%", delta_color="inverse")
-        kpi4.metric("Risques Fournisseurs", f"{critical_suppliers}", "Alertes")
-
-
-        # 3. Visualisation Plotly
-        c1, c2 = st.columns(2)
-        with c1:
-            fig = go.Figure()
-            fig.add_trace(go.Bar(x=df_mkt['Produit'], y=df_mkt['Forecast'], name='Demande', marker_color='#007bff'))
-            fig.add_trace(go.Bar(x=df_prod['Produit'], y=df_prod['Capacity'], name='Capacité', marker_color='#ff7f0e'))
-            fig.update_layout(title="Équilibre Offre vs Demande", barmode='group')
-            st.plotly_chart(fig, use_container_width=True)
+        col_sc1, col_sc2 = st.columns([2, 1])
         
-        with c2:
-            fig2 = px.pie(df_fin, values='Margin_Unit', names='Produit', title="Répartition des Marges Unitaires", hole=0.4)
-            st.plotly_chart(fig2, use_container_width=True)
+        with col_sc1:
+            liste_scenarios = [
+                "🟢 Situation Nominale (Aucun imprévu)",
+                "🔴 Crise Logistique (Grève des ports : Délais fournisseurs doublés)",
+                "🔴 Aléa de Production (Panne majeure : Capacité réduite de 30%)",
+                "🔵 Opportunité Marketing (Campagne virale : Demande augmentée de 50%)",
+                "🟠 Tension Économique (Inflation : Coûts matières augmentés de 20%)"
+            ]
+            scenario_choisi = st.selectbox("Sélectionnez un événement à simuler :", liste_scenarios)
+        
+        with col_sc2:
+            st.write("---")
+            st.info(f"**Contexte actuel :** {scenario_choisi}")
 
-        st.divider()
+        # --- ZONE D'ACTION ---
+        col_cmd, col_res = st.columns([1, 1])
 
-        # 4. Orchestration IA
-        col_ia_cmd, col_ia_res = st.columns([1, 1])
-
-        with col_ia_cmd:
-            st.subheader("🤖 Intelligence Agentique")
-            if st.button("🚀 Lancer l'Orchestration des Agents"):
-                log_area = st.empty()
-                redir = StreamlitRedirect(log_area)
+        with col_cmd:
+            st.subheader("⚙️ 3. Lancement")
+            if st.button("🚀 Lancer l'Analyse Agentique"):
+                st.info("🤖 **Discussion des agents (Analyse sous contrainte) :**")
+                terminal_placeholder = st.empty()
+                redir = StreamlitRedirect(terminal_placeholder)
                 old_stdout = sys.stdout
                 sys.stdout = redir
 
                 try:
-                    # Conversion des données en texte pour l'IA
-                    txt_mkt = df_mkt.to_string(); txt_prod = df_prod.to_string(); txt_fin = df_fin.to_string()
+                    # On injecte le scénario dans la description de chaque tâche
+                    contexte = f"CONTEXTE DE SIMULATION : {scenario_choisi}."
 
-                    t1 = Task(description=f"Analyse Demande: {txt_mkt}", expected_output="Rapport demande", agent=SOP.marketing)
-                    t2 = Task(description="Valide les volumes finaux.", expected_output="Volumes validés", agent=SOP.sales)
-                    t3 = Task(description=f"Vérifie Production: {txt_prod}", expected_output="Faisabilité", agent=SOP.supply)
-                    t4 = Task(description=f"Vérifie Achats: {txt_fin}", expected_output="Risques délais", agent=SOP.purchasing)
-                    t5 = Task(description=f"Calcule Finance: {txt_fin}", expected_output="Marge totale", agent=SOP.finance)
-                    t6 = Task(description="Rédige le Rapport Stratégique S&OP Final complet et structuré en français.", 
-                              expected_output="Rapport PIC Final", agent=SOP.orchestrator)
+                    t1 = Task(description=f"{contexte} Analyse DEMANDE : {data_mkt}.", 
+                              expected_output="Note marketing adaptée au scénario.", agent=SOP.marketing)
+                    
+                    t2 = Task(description=f"{contexte} Valide les volumes finaux.", 
+                              expected_output="Volumes validés.", agent=SOP.sales)
 
-                    crew = Crew(agents=[SOP.marketing, SOP.sales, SOP.supply, SOP.purchasing, SOP.finance, SOP.orchestrator],
-                                tasks=[t1, t2, t3, t4, t5, t6], process=Process.sequential)
+                    t3 = Task(description=f"{contexte} Compare avec PRODUCTION : {data_prod}. Identifie les goulots créés par cet événement.", 
+                              expected_output="Faisabilité technique.", agent=SOP.supply)
 
-                    resultat = crew.kickoff()
-                    st.session_state['res_sop'] = str(resultat)
+                    t4 = Task(description=f"{contexte} Analyse ACHATS : {data_fin}. Quel est l'impact de l'événement sur l'approvisionnement ?", 
+                              expected_output="Analyse de risque.", agent=SOP.purchasing)
+
+                    t5 = Task(description=f"{contexte} Calcul FINANCE : {data_fin}. Quel est l'impact de cet événement sur le profit global ?", 
+                              expected_output="Bilan financier.", agent=SOP.finance)
+
+                    t6 = Task(description=f"""{contexte} Rédige le Rapport Stratégique Final. 
+                              Explique CLAIREMENT comment l'entreprise doit s'adapter à cet événement spécifique.""", 
+                              expected_output="Plan S&OP de Crise / Opportunité.", agent=SOP.orchestrator)
+
+                    equipe = Crew(
+                        agents=[SOP.marketing, SOP.sales, SOP.supply, SOP.purchasing, SOP.finance, SOP.orchestrator],
+                        tasks=[t1, t2, t3, t4, t5, t6],
+                        process=Process.sequential
+                    )
+
+                    resultat = equipe.kickoff()
+                    st.session_state['res_final'] = str(resultat)
                 finally:
                     sys.stdout = old_stdout
 
-        with col_ia_res:
-            st.subheader("📋 Rapport de Décision Final")
-            if 'res_sop' in st.session_state:
-                st.markdown(st.session_state['res_sop'])
-                st.download_button("📥 Télécharger le Plan (.txt)", st.session_state['res_sop'], "Rapport_SOP.txt")
+        with col_res:
+            st.subheader("📋 4. Rapport Stratégique Final")
+            if 'res_final' in st.session_state:
+                st.success("Simulation terminée !")
+                st.markdown(st.session_state['res_final'])
+                st.download_button("📥 Télécharger le Plan de simulation", st.session_state['res_final'], "Simulation_SOP.txt")
 
     except Exception as e:
         st.error(f"Erreur : {e}")
 else:
-    st.info("👋 Veuillez charger votre fichier Excel pour activer le Dashboard.")
+    st.info("👋 Veuillez importer votre fichier Excel pour activer le simulateur.")
