@@ -1,37 +1,35 @@
 import streamlit as st
 from crewai import Agent, LLM
-from langchain.tools import tool # Import important
+from langchain.tools import tool
 from langchain_experimental.utilities import PythonREPL
 
 # =================================================================
-# 1. DÉFINITION DU CERVEAU
+# 1. DÉFINITION DU CERVEAU (Modèle 8B pour éviter les Rate Limits)
 # =================================================================
-if"GROQ_API_KEY" in st.secrets:
-# Si on est sur Streamlit Cloud (Utilise Groq)
-cerveau_local = LLM(
-model="groq/llama-3.3-70b-versatile",
-api_key=st.secrets["GROQ_API_KEY"]
-)
+if "GROQ_API_KEY" in st.secrets:
+    cerveau_local = LLM(
+        model="groq/llama-3.1-8b-instant", 
+        api_key=st.secrets["GROQ_API_KEY"]
+    )
 else:
     cerveau_local = LLM(
-        model="ollama/llama3.2:1b",
+        model="ollama/llama3.1:8b",
         base_url="http://localhost:11434"
     )
 
 # =================================================================
-# 2. DÉFINITION DE L'OUTIL (Correction ici)
+# 2. DÉFINITION DE L'OUTIL DE CALCUL
 # =================================================================
-
 @tool("python_repl_tool")
 def python_repl_tool(code: str):
     """
     Exécute du code python pour des calculs précis de marge et volume.
-    L'entrée doit être du code Python valide (ex: print(1250 * 45)).
+    Exemple: print(500 * 1.2)
     """
     return PythonREPL().run(code)
 
 # =================================================================
-# 3. DÉFINITION DES AGENTS
+# 3. DÉFINITION DES AGENTS (Alignement Strict à Gauche)
 # =================================================================
 
 marketing = Agent(
@@ -71,16 +69,16 @@ purchasing = Agent(
 finance = Agent(
     role='Contrôleur de Gestion',
     goal='Garantir la rentabilité du plan S&OP.',
-    backstory='Expert en calcul de coûts. Tu utilises des outils de calcul pour valider la marge.',
+    backstory='Expert en calcul de coûts. Tu utilises des outils de calcul.',
     llm=cerveau_local, 
     verbose=True,
-    tools=[python_repl_tool] # Maintenant c'est un objet tool valide
+    tools=[python_repl_tool]
 )
 
 orchestrator = Agent(
     role='Directeur S&OP (COO)',
     goal='Piloter la performance globale et valider le PIC.',
-    backstory='Tu es le garant de la stratégie. Ton rapport final doit être structuré.',
+    backstory='Tu es le garant de la stratégie. Arbitre selon la marge.',
     llm=cerveau_local, 
     verbose=True
 )
