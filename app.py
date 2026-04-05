@@ -151,7 +151,7 @@ if uploaded_file is not None:
         st.session_state['outputs'] = {
             "📢 Marketing": t1.output.raw, "🤝 Ventes": t2.output.raw,
             "🏗️ Supply": t3.output.raw, "📦 Achats": t4.output.raw,
-            "💰 Finance": t5.output.raw, "🏆 RAPPORT FINAL & TABLEAU": t6.output.raw
+            "💰 Finance": t5.output.raw, "🏆 RAPPORT FINAL ": t6.output.raw
         }
         st.session_state['run_done'] = True
     finally:
@@ -165,7 +165,7 @@ if uploaded_file is not None:
         choix = st.multiselect(
             "Quels rapports voulez-vous afficher ?", 
             options=list(st.session_state['outputs'].keys()), 
-            default=["🏆 Rapport PIC Final"]
+            default=["🏆 Rapport Final"]
         )
         
         for r in choix:
