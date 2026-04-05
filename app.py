@@ -7,10 +7,10 @@ import SOP
 import sys
 import re
 
-# 1. CONFIGURATION DE LA PAGE (Doit être la première commande Streamlit)
+# 1. CONFIGURATION DE LA PAGE
 st.set_page_config(page_title="S&OP AI Simulator", layout="wide", page_icon="🏭")
 
-# 2. CLASSE POUR CAPTURER LA DISCUSSION DES AGENTS
+# 2. CAPTURE DES LOGS AGENTS
 class StreamlitRedirect:
     def __init__(self, placeholder):
         self.placeholder = placeholder
@@ -21,7 +21,7 @@ class StreamlitRedirect:
         self.placeholder.code(self.output)
     def flush(self): pass
 
-# 3. BARRE LATÉRALE (Configuration et Upload)
+# 3. BARRE LATÉRALE
 st.sidebar.title("🛠️ Configuration")
 with st.sidebar.expander("📖 Format Excel Requis", expanded=False):
     st.write("Onglets requis :")
@@ -43,7 +43,7 @@ if uploaded_file is not None:
         df_prod = pd.read_excel(xls, 'Production'); df_prod.columns = df_prod.columns.str.strip()
         df_fin = pd.read_excel(xls, 'Finance_Achats'); df_fin.columns = df_fin.columns.str.strip()
 
-        # --- FILTRE PAR PRODUIT (POUR LA VUE) ---
+        # --- FILTRE PAR PRODUIT (POUR LA VUE DASHBOARD) ---
         liste_produits = ["Tous les produits"] + list(df_mkt['Produit'].unique())
         selected_prod = st.selectbox("🔍 Analyser un produit spécifique (Vue Dashboard) :", liste_produits)
 
@@ -80,22 +80,15 @@ if uploaded_file is not None:
                                   color='Produit', title="Risque Délais vs Rentabilité")
             st.plotly_chart(fig_risk, use_container_width=True)
 
-      # --- SIMULATEUR DE SCÉNARIOS (WHAT-IF) ---
+        # --- SIMULATEUR DE SCÉNARIOS (WHAT-IF) ---
         st.markdown("---")
         st.subheader("🎭 Simulateur de Crise et d'Opportunité")
         
         col_sc1, col_sc2 = st.columns([1, 1])
         with col_sc1:
-            # Ajout de l'option 🟣 dans la liste
             type_evenement = st.radio(
                 "Sélectionnez l'événement à simuler :", 
-                [
-                    "🟢 Nominal", 
-                    "🔴 Aléa Production", 
-                    "🔵 Pic de Demande", 
-                    "🟠 Inflation Coûts", 
-                    "🟣 Événement Personnalisé"
-                ]
+                ["🟢 Nominal", "🔴 Aléa Production", "🔵 Pic de Demande", "🟠 Inflation Coûts", "🟣 Événement Personnalisé"]
             )
 
         # Initialisation des copies pour la simulation IA
@@ -109,109 +102,66 @@ if uploaded_file is not None:
                 pct = st.slider("Baisse de capacité (%)", 10, 90, 30)
                 df_prod_sim['Capacity'] = df_prod_sim['Capacity'] * (1 - pct/100)
                 contexte_simulation = f"CRISE : Baisse de {pct}% de la capacité de production."
-            
             elif type_evenement == "🔵 Pic de Demande":
                 pct = st.slider("Hausse de demande (%)", 10, 100, 40)
                 df_mkt_sim['Forecast'] = df_mkt_sim['Forecast'] * (1 + pct/100)
                 contexte_simulation = f"OPPORTUNITÉ : Hausse de {pct}% de la demande marché."
-            
             elif type_evenement == "🟠 Inflation Coûts":
                 pct = st.slider("Hausse des coûts (%)", 10, 100, 20)
-                df_fin_sim['Material_Cost'] = df_fin_sim['Material_Cost'] * (1 + pct/100)
-                # On réduit la marge mécaniquement
-                df_fin_sim['Margin_Unit'] = df_fin_sim['Margin_Unit'] - (df_fin_sim['Material_Cost'] * (pct/100))
-                contexte_simulation = f"ALERTE : Inflation de {pct}% sur les matières premières."
-            
-            # --- NOUVEAU : ÉVÉNEMENT PERSONNALISÉ ---
+                df_fin_sim['Margin_Unit'] = df_fin_sim['Margin_Unit'] * (1 - pct/100)
+                contexte_simulation = f"ALERTE : Inflation réduisant les marges de {pct}%."
             elif type_evenement == "🟣 Événement Personnalisé":
-                txt_libre = st.text_area(
-                    "Décrivez la situation (l'IA va l'interpréter) :", 
-                    "Ex: Grève des dockers au port de Marseille, retard de livraison des composants de 4 semaines, ou fermeture temporaire d'une ligne de production."
-                )
-                contexte_simulation = f"ÉVÉNEMENT SPÉCIFIQUE DÉCRIT PAR L'UTILISATEUR : {txt_libre}. Les agents doivent analyser l'impact de cette situation précise sur le plan S&OP."
-                st.info("💡 L'IA adaptera son raisonnement à votre description.")
+                txt_libre = st.text_area("Décrivez la situation :", "Ex: Grève des dockers, retard fournisseur de 3 semaines...")
+                contexte_simulation = f"ÉVÉNEMENT SPÉCIFIQUE : {txt_libre}."
 
-        # --- BOUTON DE LANCEMENT IA ---
-        # 5. ORCHESTRATION AGENTIQUE
-    st.markdown("---")
-    st.subheader("⚙️ Lancement de l'Intelligence Artificielle")
-    
-    if st.button("🚀 Analyser et Générer le Plan S&OP", use_container_width=True):
-        col_log, col_rep = st.columns([1, 1])
+        # --- 5. ORCHESTRATION AGENTIQUE ---
+        st.markdown("---")
+        st.subheader("⚙️ Lancement de l'Intelligence Artificielle")
         
-        with col_log:
-            st.info("🤖 **Logique des agents en temps réel :**")
-            log_placeholder = st.empty()
-            redir = StreamlitRedirect(log_placeholder)
-            old_stdout = sys.stdout
-            sys.stdout = redir
+        if st.button("🚀 Analyser et Générer le Plan S&OP", use_container_width=True):
+            col_log, col_rep = st.columns([1, 1])
+            
+            with col_log:
+                st.info("🤖 **Logique des agents en temps réel :**")
+                log_placeholder = st.empty()
+                redir = StreamlitRedirect(log_placeholder)
+                old_stdout = sys.stdout
+                sys.stdout = redir
 
-            try:
-                # --- OPTIMISATION : RÉDUCTION DU POIDS DES DONNÉES (Fix RateLimit) ---
-                # On ne prend que les 15 premiers produits et les colonnes essentielles
-                txt_mkt = df_mkt[['Produit', 'Forecast']].head(15).to_string()
-                txt_prod = df_prod[['Produit', 'Capacity']].head(15).to_string()
-                txt_fin = df_fin[['Produit', 'Margin_Unit', 'Supplier_LeadTime']].head(15).to_string()
+                try:
+                    # OPTIMISATION DES DONNÉES (Pour éviter Rate Limit)
+                    txt_mkt = df_mkt_sim[['Produit', 'Forecast']].head(15).to_string()
+                    txt_prod = df_prod_sim[['Produit', 'Capacity']].head(15).to_string()
+                    txt_fin = df_fin_sim[['Produit', 'Margin_Unit', 'Supplier_LeadTime']].head(15).to_string()
 
-                # INJECTION DU SCÉNARIO DANS LES TÂCHES
-                t1 = Task(
-                    description=f"CONTEXTE: {contexte_simulation}. Analyse la demande : {txt_mkt}.", 
-                    expected_output="Rapport demande court.", 
-                    agent=SOP.marketing
-                )
-                t2 = Task(
-                    description=f"CONTEXTE: {contexte_simulation}. Valide les volumes finaux.", 
-                    expected_output="Volumes validés.", 
-                    agent=SOP.sales
-                )
-                t3 = Task(
-                    description=f"CONTEXTE: {contexte_simulation}. Compare avec Production : {txt_prod}.", 
-                    expected_output="Faisabilité usine courte.", 
-                    agent=SOP.supply
-                )
-                t4 = Task(
-                    description=f"CONTEXTE: {contexte_simulation}. Analyse risques délais : {txt_fin}.", 
-                    expected_output="Risques fournisseurs.", 
-                    agent=SOP.purchasing
-                )
-                t5 = Task(
-                    description=f"CONTEXTE: {contexte_simulation}. Calcule la rentabilité basée sur : {txt_fin}.", 
-                    expected_output="Bilan financier précis.", 
-                    agent=SOP.finance
-                )
-                t6 = Task(
-                    description=f"""CONTEXTE: {contexte_simulation}. Rédige le Rapport Stratégique Final. 
-                    Il DOIT contenir: 1. Décisions sur les volumes. 2. Actions face à l'événement simulé. 3. Rentabilité finale.""", 
-                    expected_output="Plan S&OP Final structuré en Markdown.", 
-                    agent=SOP.orchestrator
-                )
+                    # DÉFINITION DES TÂCHES
+                    t1 = Task(description=f"CONTEXTE: {contexte_simulation}. Analyse demande: {txt_mkt}.", agent=SOP.marketing, expected_output="Analyse demande.")
+                    t2 = Task(description=f"Valide les volumes de ventes finaux.", agent=SOP.sales, expected_output="Volumes validés.")
+                    t3 = Task(description=f"Vérifie la prod: {txt_prod}.", agent=SOP.supply, expected_output="Rapport industriel.")
+                    t4 = Task(description=f"Analyse risques délais: {txt_fin}.", agent=SOP.purchasing, expected_output="Rapport achats.")
+                    t5 = Task(description="Calcule la marge totale finale.", agent=SOP.finance, expected_output="Bilan financier.")
+                    t6 = Task(description=f"Rédige le Plan S&OP Final face à : {contexte_simulation}. Arbitre selon la marge.", agent=SOP.orchestrator, expected_output="Rapport S&OP complet.")
 
-                # Création du Crew (L'équipage)
-                crew = Crew(
-                    agents=[SOP.marketing, SOP.sales, SOP.supply, SOP.purchasing, SOP.finance, SOP.orchestrator],
-                    tasks=[t1, t2, t3, t4, t5, t6],
-                    process=Process.sequential
-                )
+                    crew = Crew(
+                        agents=[SOP.marketing, SOP.sales, SOP.supply, SOP.purchasing, SOP.finance, SOP.orchestrator],
+                        tasks=[t1, t2, t3, t4, t5, t6],
+                        process=Process.sequential
+                    )
 
-                # Lancement
-                resultat = crew.kickoff()
-                st.session_state['resultat_sop'] = str(resultat)
+                    resultat = crew.kickoff()
+                    st.session_state['resultat_sop'] = str(resultat)
+                finally:
+                    sys.stdout = old_stdout
 
-            except Exception as e:
-                st.error(f"⚠️ Erreur lors de l'analyse : {e}")
-            finally:
-                sys.stdout = old_stdout
+            with col_rep:
+                st.subheader("📋 Rapport de Décision S&OP")
+                if 'resultat_sop' in st.session_state:
+                    st.success("✅ Plan S&OP généré !")
+                    st.markdown(st.session_state['resultat_sop'])
+                    st.download_button("📥 Télécharger", st.session_state['resultat_sop'], "Rapport_SOP.md")
 
-        with col_rep:
-            st.subheader("📋 Rapport de Décision S&OP")
-            if 'resultat_sop' in st.session_state:
-                st.success("✅ Plan S&OP généré avec succès !")
-                st.markdown(st.session_state['resultat_sop'])
-                st.download_button("📥 Télécharger le rapport", st.session_state['resultat_sop'], "Rapport_SOP.md")
+    except Exception as e:
+        st.error(f"⚠️ Erreur : {e}")
 
-# --- PROTECTION FINALE ---
-except Exception as e:
-    st.error(f"⚠️ Erreur de chargement du fichier : {e}")
 else:
-    if uploaded_file is None:
-        st.info("👋 Bienvenue ! Importez le fichier Excel dans le menu de gauche pour démarrer le simulateur.")
+    st.info("👋 Bienvenue ! Importez le fichier Excel dans le menu de gauche pour démarrer.")
