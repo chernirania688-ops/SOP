@@ -40,7 +40,7 @@ if uploaded_file is not None:
         df_prod = pd.read_excel(xls, 'Production'); df_prod.columns = df_prod.columns.str.strip()
         df_fin = pd.read_excel(xls, 'Finance_Achats'); df_fin.columns = df_fin.columns.str.strip()
 
-        # 2. SCÉNARIOS (WHAT-IF) - Placé avant pour impacter les graphes
+        # 2. SCÉNARIOS (WHAT-IF)
         with st.container(border=True):
             st.subheader("🎭 Gestionnaire de Scénarios")
             col_sc1, col_sc2 = st.columns([1, 2])
@@ -82,7 +82,6 @@ if uploaded_file is not None:
         # 4. GRAPHIQUES AVANCÉS
         col_g1, col_g2 = st.columns(2)
         with col_g1:
-            # Graphe Overlay (Offre vs Demande)
             fig_bal = go.Figure()
             fig_bal.add_trace(go.Bar(x=df_prod_sim['Produit'], y=df_prod_sim['Capacity'], name='Capacité', marker_color='#2ecc71', opacity=0.6))
             fig_bal.add_trace(go.Bar(x=df_mkt_sim['Produit'], y=df_mkt_sim['Forecast'], name='Demande', marker_color='#e74c3c', width=0.4))
@@ -90,43 +89,40 @@ if uploaded_file is not None:
             st.plotly_chart(fig_bal, use_container_width=True)
 
         with col_g2:
-            # Treemap de Profit
             df_profit = pd.merge(df_mkt_sim, df_fin, on='Produit')
             df_profit['Profit_Total'] = df_profit['Forecast'] * df_profit['Margin_Unit']
             fig_tree = px.treemap(df_profit, path=['Produit'], values='Profit_Total', color='Margin_Unit',
                                   color_continuous_scale='RdYlGn', title="Poids Économique par Produit")
             st.plotly_chart(fig_tree, use_container_width=True)
 
-        # Rankings
-        col_r1, col_r2 = st.columns(2)
-        with col_r1:
-            top_d = df_mkt_sim.sort_values(by='Forecast', ascending=False).head(10)
-            st.plotly_chart(px.bar(top_d, x='Forecast', y='Produit', orientation='h', title="Top 10 Demande", color_discrete_sequence=['#3498db']), use_container_width=True)
-        with col_r2:
-            df_sat = pd.merge(df_mkt_sim, df_prod_sim, on='Produit')
-            df_sat['Sat_%'] = (df_sat['Forecast'] / df_sat['Capacity'] * 100)
-            top_s = df_sat.sort_values(by='Sat_%', ascending=False).head(10)
-            st.plotly_chart(px.bar(top_s, x='Sat_%', y='Produit', orientation='h', title="Top 10 Goulots (%)", color='Sat_%', color_continuous_scale='Reds'), use_container_width=True)
-
-        # 5. Lancement IA
+        # 5. LANCEMENT IA
         st.markdown("---")
         if st.button("🚀 Lancer le Processus S&OP Collaboratif", use_container_width=True):
             col_log, col_rep = st.columns([1, 1])
             with col_log:
                 st.info("🤖 Logique des agents...")
                 log_placeholder = st.empty()
-                sys.stdout = StreamlitRedirect(log_placeholder)
-                    try:
-                    # On ne garde que les 10 produits les plus importants pour l'analyse
-                    # Cela réduit la consommation de tokens de 80%
+                redir = StreamlitRedirect(log_placeholder)
+                old_stdout = sys.stdout
+                sys.stdout = redir
+                
+                try:
+                    # --- OPTIMISATION DONNÉES (Pour éviter RateLimit) ---
                     txt_mkt = df_mkt_sim.sort_values(by='Forecast', ascending=False).head(10)[['Produit', 'Forecast']].to_string()
                     txt_prod = df_prod_sim.sort_values(by='Capacity', ascending=True).head(10)[['Produit', 'Capacity']].to_string()
                     txt_fin = df_fin.sort_values(by='Margin_Unit', ascending=False).head(10)[['Produit', 'Margin_Unit']].to_string()
 
+                    # --- DÉFINITION DES TÂCHES ---
+                    t_mkt = Task(description=f"Analyse demande : {txt_mkt}. Contexte: {contexte_sim}", agent=SOP.marketing, expected_output="Analyse demande.")
+                    t_supply = Task(description=f"Vérifie prod : {txt_prod}. Contexte: {contexte_sim}", agent=SOP.supply, expected_output="Rapport industriel.")
+                    t_finance = Task(description=f"Analyse financière sur : {txt_fin}.", agent=SOP.finance, expected_output="Bilan financier.")
+                    t_final = Task(description="Rédige le Plan S&OP Final. Arbitre selon la marge.", agent=SOP.orchestrator, expected_output="Plan S&OP Stratégique.")
 
+                    # --- CREW ---
                     crew = Crew(agents=[SOP.marketing, SOP.supply, SOP.finance, SOP.orchestrator], tasks=[t_mkt, t_supply, t_finance, t_final])
                     crew.kickoff()
 
+                    # --- STOCKAGE RÉSULTATS ---
                     st.session_state['outputs'] = {
                         "📢 Marketing": t_mkt.output.raw,
                         "🏗️ Supply": t_supply.output.raw,
@@ -134,10 +130,12 @@ if uploaded_file is not None:
                         "🏆 Rapport Final": t_final.output.raw
                     }
                     st.session_state['run_done'] = True
+                except Exception as e:
+                    st.error(f"Erreur IA : {e}")
                 finally:
-                    sys.stdout = sys.__stdout__
+                    sys.stdout = old_stdout
 
-        # 6. FILTRE DE VUE DES RÉPONSES (VOTRE BOUTON)
+        # 6. FILTRE DE VUE DES RÉPONSES
         if st.session_state.get('run_done'):
             st.markdown("---")
             st.subheader("📋 Consultation des rapports")
@@ -152,4 +150,4 @@ if uploaded_file is not None:
     except Exception as e:
         st.error(f"⚠️ Erreur : {e}")
 else:
-    st.info("👋 Veuillez charger le fichier Excel.")
+    st.info("👋 Veuillez charger le fichier Excel pour commencer.")
