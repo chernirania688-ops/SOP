@@ -6,6 +6,21 @@ from crewai import Crew, Process, Task
 import SOP 
 import sys
 import re
+st.set_page_config(page_title="S&OP AI Simulator", layout="wide", page_icon="🏭")
+--- BARRE LATÉRALE ---
+st.sidebar.title("🛠️ Configuration")
+with st.sidebar.expander("📖 Format Excel Requis", expanded=False):
+st.write("Onglet Demande: Produit, Marketing_Forecast, Sales_Orders")
+st.write("Onglet Production: Produit, Capacity, Stock_Level")
+st.write("Onglet Finance_Achats: Produit, Material_Cost, Margin_Unit, Supplier_LeadTime")
+uploaded_file = st.sidebar.file_uploader("📥 Charger SOP_Data.xlsx", type=['xlsx'])
+st.title("🏭 Pilotage Stratégique & Simulateur S&OP")
+st.markdown("---")
+if uploaded_file is not None:
+try:
+# 1. LECTURE ET NETTOYAGE DES DONNÉES
+xls = pd.ExcelFile(uploaded_file)
+onglets_requis = ['Demande', 'Production', 'Finance_Achats']
 
 # --- CAPTURE DES LOGS ---
 class StreamlitRedirect:
@@ -77,24 +92,36 @@ if uploaded_file:
         fig_risk.update_layout(height=300)
         st.plotly_chart(fig_risk, use_container_width=True)
 
-    # --- SCÉNARIOS WHAT-IF ---
-    st.markdown("---")
-    st.subheader("🎭 Simulateur de Crise")
+   
+   # 4. SIMULATEUR DE SCÉNARIOS "WHAT-IF"
+    st.subheader("🎭 Simulateur de Crise et d'Opportunité")
+    
     col_sc1, col_sc2 = st.columns([1, 1])
-    
     with col_sc1:
-        type_event = st.radio("Événement :", ["Normal", "🔴 Rupture Machine (-40% Capacité)", "🔵 Pic Promo (+50% Demande)"])
-    
-    # On applique les modifications sur les données réelles AVANT de les donner aux agents
-    df_mkt_sim = df_mkt.copy(); df_prod_sim = df_prod.copy()
-    contexte = "Situation normale."
+        type_evenement = st.radio("Sélectionnez l'événement à simuler :",["🟢 Nominal (Aucun problème)", "🔴 Aléa de Production", "🔵 Pic de Demande", "🟠 Inflation des Coûts", "🟣 Événement Personnalisé"]
+        )
 
-    if "Rupture Machine" in type_event:
-        df_prod_sim['Capacity'] = df_prod_sim['Capacity'] * 0.6
-        contexte = "ALERTE : Une machine est en panne sur les lignes principales !"
-    elif "Pic Promo" in type_event:
-        df_mkt_sim['Forecast'] = df_mkt_sim['Forecast'] * 1.5
-        contexte = "MARKETING : Une campagne virale booste la demande de 50% !"
+    with col_sc2:
+        contexte_simulation = "SITUATION NORMALE : Aucun problème particulier."
+        
+        if type_evenement == "🔴 Aléa de Production":
+            pct_baisse = st.slider("Baisse de capacité usine (%)", 10, 100, 30)
+            contexte_simulation = f"CRISE PRODUCTION : La capacité totale de l'usine est réduite de {pct_baisse}%. L'agent Supply doit impérativement alerter sur les manques et l'Orchestrateur doit sacrifier des produits."
+            st.warning(f"⚠️ Simulation : Perte de {pct_baisse}% de capacité.")
+        
+        elif type_evenement == "🔵 Pic de Demande":
+            pct_hausse = st.slider("Hausse soudaine de la demande (%)", 10, 200, 50)
+            contexte_simulation = f"PIC DEMANDE : La demande augmente de {pct_hausse}%. L'agent Marketing doit l'intégrer et la Supply Chain doit dire si c'est fabricable."
+            st.info(f"📈 Simulation : Hausse des ventes de {pct_hausse}%.")
+            
+        elif type_evenement == "🟠 Inflation des Coûts":
+            pct_infl = st.slider("Hausse des coûts matières (%)", 10, 100, 20)
+            contexte_simulation = f"INFLATION : Les coûts d'achat (Material_Cost) augmentent de {pct_infl}%. La Finance doit recalculer la marge à la baisse."
+            st.error(f"💰 Simulation : Inflation de {pct_infl}%.")
+            
+        elif type_evenement == "🟣 Événement Personnalisé":
+            txt_libre = st.text_area("Décrivez la situation :", "Ex: Grève des dockers, retard fournisseur de 3 semaines...")
+            contexte_simulation = f"ÉVÉNEMENT SPÉCIFIQUE : {txt_libre}. Les agents doivent s'adapter à cette situation exacte."
 
     # --- BOUTON DE LANCEMENT IA ---
     if st.button("🚀 Lancer l'Analyse Agentique (Plan S&OP)", use_container_width=True):
