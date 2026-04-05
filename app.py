@@ -132,46 +132,86 @@ if uploaded_file is not None:
                 st.info("💡 L'IA adaptera son raisonnement à votre description.")
 
         # --- BOUTON DE LANCEMENT IA ---
-        st.markdown("---")
-        if st.button("🚀 Lancer l'Analyse Agentique (Plan S&OP)", use_container_width=True):
-            col_log, col_res = st.columns([1, 1])
-            
-            with col_log:
-                st.info("🤖 **Réflexion des agents...**")
-                log_placeholder = st.empty()
-                redir = StreamlitRedirect(log_placeholder)
-                old_stdout = sys.stdout
-                sys.stdout = redir
+        # 5. ORCHESTRATION AGENTIQUE
+    st.markdown("---")
+    st.subheader("⚙️ Lancement de l'Intelligence Artificielle")
+    
+    if st.button("🚀 Analyser et Générer le Plan S&OP", use_container_width=True):
+        col_log, col_rep = st.columns([1, 1])
+        
+        with col_log:
+            st.info("🤖 **Logique des agents en temps réel :**")
+            log_placeholder = st.empty()
+            redir = StreamlitRedirect(log_placeholder)
+            old_stdout = sys.stdout
+            sys.stdout = redir
 
-                try:
-                    # Définition des Tâches avec les données simulées
-                    t1 = Task(description=f"Analyse Demande : {df_mkt_sim.to_string()}. Contexte: {contexte_simulation}", agent=SOP.marketing, expected_output="Rapport demande.")
-                    t2 = Task(description=f"Valide les volumes de ventes finaux.", agent=SOP.sales, expected_output="Volumes validés.")
-                    t3 = Task(description=f"Vérifie la prod : {df_prod_sim.to_string()}.", agent=SOP.supply, expected_output="Rapport industriel.")
-                    t4 = Task(description=f"Analyse risques et coûts : {df_fin_sim.to_string()}.", agent=SOP.purchasing, expected_output="Rapport achats.")
-                    t5 = Task(description="Calcule la marge totale.", agent=SOP.finance, expected_output="Bilan financier.")
-                    t6 = Task(description="Rédige le Plan S&OP Final. Arbitre selon la marge.", agent=SOP.orchestrator, expected_output="Plan S&OP complet.")
+            try:
+                # --- OPTIMISATION : RÉDUCTION DU POIDS DES DONNÉES (Fix RateLimit) ---
+                # On ne prend que les 15 premiers produits et les colonnes essentielles
+                txt_mkt = df_mkt[['Produit', 'Forecast']].head(15).to_string()
+                txt_prod = df_prod[['Produit', 'Capacity']].head(15).to_string()
+                txt_fin = df_fin[['Produit', 'Margin_Unit', 'Supplier_LeadTime']].head(15).to_string()
 
-                    crew = Crew(
-                        agents=[SOP.marketing, SOP.sales, SOP.supply, SOP.purchasing, SOP.finance, SOP.orchestrator],
-                        tasks=[t1, t2, t3, t4, t5, t6],
-                        process=Process.sequential
-                    )
+                # INJECTION DU SCÉNARIO DANS LES TÂCHES
+                t1 = Task(
+                    description=f"CONTEXTE: {contexte_simulation}. Analyse la demande : {txt_mkt}.", 
+                    expected_output="Rapport demande court.", 
+                    agent=SOP.marketing
+                )
+                t2 = Task(
+                    description=f"CONTEXTE: {contexte_simulation}. Valide les volumes finaux.", 
+                    expected_output="Volumes validés.", 
+                    agent=SOP.sales
+                )
+                t3 = Task(
+                    description=f"CONTEXTE: {contexte_simulation}. Compare avec Production : {txt_prod}.", 
+                    expected_output="Faisabilité usine courte.", 
+                    agent=SOP.supply
+                )
+                t4 = Task(
+                    description=f"CONTEXTE: {contexte_simulation}. Analyse risques délais : {txt_fin}.", 
+                    expected_output="Risques fournisseurs.", 
+                    agent=SOP.purchasing
+                )
+                t5 = Task(
+                    description=f"CONTEXTE: {contexte_simulation}. Calcule la rentabilité basée sur : {txt_fin}.", 
+                    expected_output="Bilan financier précis.", 
+                    agent=SOP.finance
+                )
+                t6 = Task(
+                    description=f"""CONTEXTE: {contexte_simulation}. Rédige le Rapport Stratégique Final. 
+                    Il DOIT contenir: 1. Décisions sur les volumes. 2. Actions face à l'événement simulé. 3. Rentabilité finale.""", 
+                    expected_output="Plan S&OP Final structuré en Markdown.", 
+                    agent=SOP.orchestrator
+                )
 
-                    result = crew.kickoff()
-                    st.session_state['resultat_sop'] = str(result)
-                finally:
-                    sys.stdout = old_stdout
+                # Création du Crew (L'équipage)
+                crew = Crew(
+                    agents=[SOP.marketing, SOP.sales, SOP.supply, SOP.purchasing, SOP.finance, SOP.orchestrator],
+                    tasks=[t1, t2, t3, t4, t5, t6],
+                    process=Process.sequential
+                )
 
-            with col_res:
-                st.success("✅ Rapport S&OP Généré")
-                if 'resultat_sop' in st.session_state:
-                    st.markdown(st.session_state['resultat_sop'])
-                    st.download_button("📥 Télécharger le Plan", st.session_state['resultat_sop'], "Plan_SOP.md")
+                # Lancement
+                resultat = crew.kickoff()
+                st.session_state['resultat_sop'] = str(resultat)
 
-    except Exception as e:
-        st.error(f"⚠️ Erreur : {e}")
-        st.info("Vérifiez que votre fichier Excel contient les bons noms d'onglets et de colonnes.")
+            except Exception as e:
+                st.error(f"⚠️ Erreur lors de l'analyse : {e}")
+            finally:
+                sys.stdout = old_stdout
 
+        with col_rep:
+            st.subheader("📋 Rapport de Décision S&OP")
+            if 'resultat_sop' in st.session_state:
+                st.success("✅ Plan S&OP généré avec succès !")
+                st.markdown(st.session_state['resultat_sop'])
+                st.download_button("📥 Télécharger le rapport", st.session_state['resultat_sop'], "Rapport_SOP.md")
+
+# --- PROTECTION FINALE ---
+except Exception as e:
+    st.error(f"⚠️ Erreur de chargement du fichier : {e}")
 else:
-    st.info("👋 Veuillez charger le fichier Excel `SOP_Data.xlsx` dans le menu de gauche.")
+    if uploaded_file is None:
+        st.info("👋 Bienvenue ! Importez le fichier Excel dans le menu de gauche pour démarrer le simulateur.")
