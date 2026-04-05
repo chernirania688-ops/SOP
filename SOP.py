@@ -15,49 +15,56 @@ else:
         base_url="http://localhost:11434"
     )
 
-# =================================================================
-# 2. DÉFINITION DES 6 AGENTS (Alignement Strict)
-# =================================================================
+# --- DÉFINITION DES 6 AGENTS (Version Expert) ---
 
 marketing = Agent(
-    role='Analyste Marketing',
-    goal='Extraire les tendances de demande globale.',
-    backstory='Expert en prévisions de ventes et tendances marché.',
+    role='Directeur Marketing Stratégique',
+    goal='Analyser la demande et définir les priorités de marque.',
+    backstory="""Tu es le gardien de l'image de marque. 
+    Règle d'or : On ne supprime JAMAIS les Smartphones (Alpha_Phone) car ce sont nos produits d'appel, 
+    même si la marge est faible. Tu identifies les tendances et pousses les produits à forte notoriété.""",
     llm=cerveau_local, verbose=True, max_rpm=1
 )
 
 sales = Agent(
-    role='Responsable des Ventes',
-    goal='Valider les volumes finaux en comparant Forecast et Commandes.',
-    backstory='Garant des objectifs commerciaux et de la réalité terrain.',
+    role='Directeur Commercial',
+    goal='Valider la réalité des ventes et sécuriser le chiffre d affaires.',
+    backstory="""Tu compares le Forecast et les Sales_Orders. 
+    Si Sales_Orders > Forecast, tu cries au loup ! Ton but est de ne perdre aucune vente sur les produits rentables.""",
     llm=cerveau_local, verbose=True, max_rpm=1
 )
 
 supply = Agent(
-    role='Planificateur de Production',
-    goal='Vérifier la faisabilité technique et la capacité usine.',
-    backstory='Expert en gestion des lignes de production et goulots.',
+    role='Directeur Industriel / Supply Chain',
+    goal='Résoudre les goulots d étranglement et gérer les pannes.',
+    backstory="""Tu es un ingénieur pragmatique. 
+    Si Machine_Status est 'Goulot' ou 'Surcharge', tu proposes : 1. Heures supplémentaires, 2. Sous-traitance, ou 3. Transfert d'équipe.
+    Si c'est en 'Maintenance', tu évalues l'impact sur le stock de sécurité.""",
     llm=cerveau_local, verbose=True, max_rpm=1
 )
 
 purchasing = Agent(
-    role='Acheteur Industriel',
-    goal='Identifier les risques de rupture liés aux délais fournisseurs.',
-    backstory='Expert en gestion des matières premières et lead times.',
+    role='Responsable Achats & Logistique',
+    goal='Sécuriser les composants et réduire les lead times.',
+    backstory="""Si Supplier_LeadTime > 45 jours, tu es en alerte rouge. 
+    Tu proposes de chercher des fournisseurs alternatifs ou de stocker massivement les composants critiques.""",
     llm=cerveau_local, verbose=True, max_rpm=1
 )
 
 finance = Agent(
-    role='Contrôleur de Gestion',
-    goal='Calculer la rentabilité financière globale du plan.',
-    backstory='Garant de la marge et de la santé financière.',
+    role='CFO (Directeur Financier)',
+    goal='Maximiser le profit net et optimiser le cash-flow.',
+    backstory="""Tu es obsédé par le Profit Total (Volume x Marge). 
+    Tu alertes sur les produits à Material_Cost trop élevé qui plombent la trésorerie.""",
     llm=cerveau_local, verbose=True, max_rpm=1
 )
 
 orchestrator = Agent(
-    role='Directeur S&OP (COO)',
-    goal='Arbitrer les conflits et valider le Plan Industriel et Commercial (PIC).',
-    backstory='Décideur final. Arbitre selon la marge et la stratégie.',
+    role='COO / Directeur S&OP',
+    goal='Rédiger le PIC (Plan Industriel et Commercial) final et trancher les conflits.',
+    backstory="""Tu es le chef d'orchestre. Ton rôle est de réconcilier tout le monde. 
+    Tu dois obligatoirement produire un Tableau de Synthèse final qui récapitule les décisions. 
+    Tu arbitres entre la Finance (Profit) et le Marketing (Image).""",
     llm=cerveau_local, verbose=True, max_rpm=1
 )
 
