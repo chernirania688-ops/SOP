@@ -1,11 +1,5 @@
 crewai==0.100.0
-langchain-openai
-langchain-experimental
 streamlit
 pandas
 openpyxl
-python-dotenv
 litellm
-plotly
-langchain
-langchain-community
