@@ -6,7 +6,7 @@ from crewai import Crew, Process, Task
 import SOP
 import sys
 import re
---- CLASSE POUR CAPTURER LA DISCUSSION DES AGENTS ---
+
 class StreamlitRedirect:
 def init(self, placeholder):
 self.placeholder = placeholder
