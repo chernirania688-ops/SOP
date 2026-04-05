@@ -9,7 +9,7 @@ from crewai import Agent, LLM
 if "GROQ_API_KEY" in st.secrets:
     # Si on est sur Streamlit Cloud (Utilise Groq)
     cerveau_local = LLM(
-        model="groq/llama-3.1-8b-versatile",
+        model="groq/llama-3.1-8b-instant"
         api_key=st.secrets["GROQ_API_KEY"]
     )
 else:
