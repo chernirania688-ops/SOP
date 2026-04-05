@@ -114,49 +114,49 @@ if uploaded_file is not None:
                               color_continuous_scale='RdYlGn', title="Répartition de la Marge")
         st.plotly_chart(fig_tree, use_container_width=True)
 
-    # --- SECTION 3 : ORCHESTRATION IA (Pleine Largeur + 6 Agents) ---
-    st.markdown("---")
-    st.subheader("🤖 Intelligence Agentique : Analyse Multi-Agents")
-
+   # --- SECTION 3 : ORCHESTRATION IA (Version Tableaux) ---
     if st.button("🚀 Lancer le Processus S&OP Collaboratif", use_container_width=True):
-        st.info("🧠 Les 6 agents travaillent sur toute la page...")
-        log_placeholder = st.empty()
-        redir = StreamlitRedirect(log_placeholder)
-        old_stdout = sys.stdout
-        sys.stdout = redir
+       st.info("🧠 Les 6 agents négocient les solutions industrielles...")
+       log_p = st.empty(); redir = StreamlitRedirect(log_p); sys.stdout = redir
+    
+    try:
+        # Données envoyées (On envoie les statuts machines et lead times)
+        txt_mkt = df_mkt_sim.head(15).to_string()
+        txt_prod = df_prod_sim.head(15).to_string()
+        txt_fin = df_fin.head(15).to_string()
+
+        # DÉFINITION DES TACHES AMÉLIORÉES
+        t1 = Task(description=f"Marketing: Analyse la demande {txt_mkt}. Identifie les produits stratégiques.", agent=SOP.marketing, expected_output="Rapport marketing.")
+        t2 = Task(description=f"Sales: Compare Forecast et Orders. Signale les risques de perte de CA.", agent=SOP.sales, expected_output="Rapport ventes.")
         
-        try:
-            # Optimisation data (Head 15) pour éviter RateLimit
-            txt_mkt = df_mkt_sim.sort_values(by='Forecast', ascending=False).head(15)[['Produit', 'Forecast']].to_string()
-            txt_prod = df_prod_sim.sort_values(by='Capacity', ascending=True).head(15)[['Produit', 'Capacity']].to_string()
-            txt_fin = df_fin.head(15)[['Produit', 'Margin_Unit']].to_string()
+        t3 = Task(description=f"""Supply: Analyse l'onglet Production {txt_prod}. 
+                  Pour chaque 'Goulot' ou 'Maintenance', propose une solution concrète (heures supp, transfert de ligne).""", 
+                  agent=SOP.supply, expected_output="Plan de production correctif.")
+        
+        t4 = Task(description=f"Achats: Analyse {txt_fin}. Liste les 3 plus gros risques fournisseurs.", agent=SOP.purchasing, expected_output="Plan de sécurisation achats.")
+        t5 = Task(description=f"Finance: Calcule le profit total du scénario {contexte_simulation}.", agent=SOP.finance, expected_output="Bilan financier chiffré.")
+        
+        t6 = Task(description=f"""Directeur S&OP: Rédige la décision finale pour le scénario {contexte_simulation}. 
+                  TU DOIS FINIR TON RAPPORT PAR UN TABLEAU MARKDOWN avec les colonnes suivantes :
+                  | Produit | Décision (Maintenir/Réduire/Augmenter) | Solution Industrielle | Impact Marge |""", 
+                  agent=SOP.orchestrator, expected_output="Rapport PIC Final avec Tableau de Synthèse.")
 
-            # DÉFINITION DES 6 TÂCHES
-            t1 = Task(description=f"Marketing: Analyse demande {txt_mkt}.", agent=SOP.marketing, expected_output="Rapport demande.")
-            t2 = Task(description="Ventes: Valide les volumes finaux terrain.", agent=SOP.sales, expected_output="Rapport ventes.")
-            t3 = Task(description=f"Supply: Vérifie prod {txt_prod}.", agent=SOP.supply, expected_output="Rapport industriel.")
-            t4 = Task(description=f"Achats: Analyse risques composants {txt_fin}.", agent=SOP.purchasing, expected_output="Rapport achats.")
-            t5 = Task(description=f"Finance: Bilan rentabilité sur {txt_fin}.", agent=SOP.finance, expected_output="Bilan financier.")
-            t6 = Task(description=f"Directeur: Arbitre PIC final pour {contexte_simulation}.", agent=SOP.orchestrator, expected_output="Plan S&OP Final.")
+        crew = Crew(
+            agents=[SOP.marketing, SOP.sales, SOP.supply, SOP.purchasing, SOP.finance, SOP.orchestrator],
+            tasks=[t1, t2, t3, t4, t5, t6],
+            process=Process.sequential
+        )
+        crew.kickoff()
 
-            crew = Crew(
-                agents=[SOP.marketing, SOP.sales, SOP.supply, SOP.purchasing, SOP.finance, SOP.orchestrator],
-                tasks=[t1, t2, t3, t4, t5, t6]
-            )
-            crew.kickoff()
-
-            # SAUVEGARDE DES 6 RAPPORTS
-            st.session_state['outputs'] = {
-                "📢 Marketing": t1.output.raw,
-                "🤝 Ventes": t2.output.raw,
-                "🏗️ Supply Chain": t3.output.raw,
-                "📦 Achats / Risques": t4.output.raw,
-                "💰 Finance": t5.output.raw,
-                "🏆 Rapport PIC Final": t6.output.raw
-            }
-            st.session_state['run_done'] = True
+        st.session_state['outputs'] = {
+            "📢 Marketing": t1.output.raw, "🤝 Ventes": t2.output.raw,
+            "🏗️ Supply": t3.output.raw, "📦 Achats": t4.output.raw,
+            "💰 Finance": t5.output.raw, "🏆 RAPPORT FINAL & TABLEAU": t6.output.raw
+        }
+        st.session_state['run_done'] = True
         finally:
-            sys.stdout = old_stdout
+        sys.stdout = sys.__stdout__
+           
 
     # --- CONSULTATION DES RAPPORTS ---
     if st.session_state.get('run_done'):
