@@ -116,7 +116,7 @@ if uploaded_file is not None:
                 st.info("🤖 Logique des agents...")
                 log_placeholder = st.empty()
                 sys.stdout = StreamlitRedirect(log_placeholder)
-                  try:
+                    try:
                     # On ne garde que les 10 produits les plus importants pour l'analyse
                     # Cela réduit la consommation de tokens de 80%
                     txt_mkt = df_mkt_sim.sort_values(by='Forecast', ascending=False).head(10)[['Produit', 'Forecast']].to_string()
