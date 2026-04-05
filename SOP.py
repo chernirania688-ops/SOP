@@ -1,87 +1,68 @@
 import streamlit as st
 from crewai import Agent, LLM
-from langchain.tools import tool
-from langchain_experimental.utilities import PythonREPL
-
-# =================================================================
-# 1. DÉFINITION DU CERVEAU (Modèle 8B pour éviter les Rate Limits)
-# =================================================================
+=================================================================
+1. DÉFINITION DU CERVEAU (Variable : cerveau_local)
+=================================================================
+Cette logique permet de basculer entre Groq (Cloud) et Ollama (Local)
 if "GROQ_API_KEY" in st.secrets:
-    cerveau_local = LLM(
-        model="groq/llama-3.1-8b-instant", 
-        api_key=st.secrets["GROQ_API_KEY"]
-    )
+# Si on est sur Streamlit Cloud (Utilise Groq)
+cerveau_local = LLM(
+model="groq/llama-3.3-70b-versatile",
+api_key=st.secrets["GROQ_API_KEY"]
+)
 else:
-    cerveau_local = LLM(
-        model="ollama/llama3.1:8b",
-        base_url="http://localhost:11434"
-    )
-
-# =================================================================
-# 2. DÉFINITION DE L'OUTIL DE CALCUL
-# =================================================================
-@tool("python_repl_tool")
-def python_repl_tool(code: str):
-    """
-    Exécute du code python pour des calculs précis de marge et volume.
-    Exemple: print(500 * 1.2)
-    """
-    return PythonREPL().run(code)
-
-# =================================================================
-# 3. DÉFINITION DES AGENTS (Alignement Strict à Gauche)
-# =================================================================
-
+# Si on est sur votre PC (Utilise Ollama)
+cerveau_local = LLM(
+model="ollama/llama3.2:1b",
+base_url="http://localhost:11434"
+)
+=================================================================
+2. DÉFINITION DES AGENTS (Vérifiez qu'ils utilisent bien cerveau_local)
+=================================================================
 marketing = Agent(
-    role='Analyste Marketing',
-    goal='Extraire les tendances de demande.',
-    backstory='Expert en prévisions de ventes.',
-    llm=cerveau_local, 
-    verbose=True, 
-    allow_delegation=False
+role='Analyste Marketing',
+goal='Extraire les tendances de l onglet Demande.',
+backstory='Tu es un expert en chiffres. Réponds toujours en français.',
+llm=cerveau_local,
+verbose=True
 )
-
 sales = Agent(
-    role='Responsable des Ventes',
-    goal='Valider les volumes de vente finaux.',
-    backstory='Tu compares le Forecast et les Orders.',
-    llm=cerveau_local,
-    verbose=True
+role='Responsable des Ventes',
+goal='Valider les volumes de vente finaux.',
+backstory='Tu compares le Forecast et les Orders. Réponds toujours en français.',
+llm=cerveau_local,
+verbose=True
 )
-
 supply = Agent(
-    role='Planificateur de Production',
-    goal='Vérifier la faisabilité technique et les stocks.',
-    backstory='Garant des machines et des matières premières.',
-    llm=cerveau_local, 
-    verbose=True, 
-    allow_delegation=False
+role='Planificateur de Production',
+goal='Comparer les besoins de vente avec la capacité réelle de l usine.',
+backstory='Tu es ingénieur en production. Réponds toujours en français.',
+llm=cerveau_local,
+verbose=True
 )
-
 purchasing = Agent(
-    role='Acheteur Industriel',
-    goal='Identifier les risques de rupture.',
-    backstory='Tu analyses les Lead Times.',
-    llm=cerveau_local,
-    verbose=True
+role='Acheteur Industriel',
+goal='Identifier les risques de rupture basés sur les délais fournisseurs.',
+backstory='Tu analyses les Lead Times. Réponds toujours en français.',
+llm=cerveau_local,
+verbose=True
 )
-
 finance = Agent(
-    role='Contrôleur de Gestion',
-    goal='Garantir la rentabilité du plan S&OP.',
-    backstory='Expert en calcul de coûts. Tu utilises des outils de calcul.',
-    llm=cerveau_local, 
-    verbose=True,
-    tools=[python_repl_tool]
+role='Contrôleur de Gestion Industriel',
+goal='Calculer la rentabilité financière globale (Volume x Marge).',
+backstory="""Tu es un expert en calcul de coûts. Tu ne te contentes pas d'additionner les marges unitaires.
+Tu multiplies CHAQUE volume validé par sa marge unitaire pour donner le profit total en euros.
+Tu es très précis avec les chiffres.""",
+llm=cerveau_local, verbose=True
 )
-
 orchestrator = Agent(
-    role='Directeur S&OP (COO)',
-    goal='Piloter la performance globale et valider le PIC.',
-    backstory='Tu es le garant de la stratégie. Arbitre selon la marge.',
-    llm=cerveau_local, 
-    verbose=True
+role='Directeur S&OP (COO)',
+goal='Piloter la performance globale et valider le Plan Industriel et Commercial (PIC).',
+backstory="""Tu es le garant de la stratégie. Ton rapport final doit être structuré,
+professionnel et inclure des indicateurs clés (KPIs). Tu arbitres les conflits en favorisant
+les produits à plus forte marge quand la capacité manque.""",
+llm=cerveau_local, verbose=True
 )
-
-if __name__ == "__main__":
-    print("Le module SOP est prêt.")
+Empêche l'exécution automatique lors de l'import
+if name == "main":
+print("Le module SOP est prêt.")
