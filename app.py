@@ -39,6 +39,21 @@ if uploaded_file is not None:
         df_prod = pd.read_excel(xls, 'Production'); df_prod.columns = df_prod.columns.str.strip()
         df_fin = pd.read_excel(xls, 'Finance_Achats'); df_fin.columns = df_fin.columns.str.strip()
 
+# --- BARRE LATÉRALE ---
+st.sidebar.title("🛠️ Configuration")
+uploaded_file = st.sidebar.file_uploader("📥 Charger SOP_Data.xlsx", type=['xlsx'])
+
+st.title("🏭 Pilotage Stratégique & Simulateur S&OP")
+st.markdown("---")
+
+if uploaded_file is not None:
+    try:
+        # 1. LECTURE DES DONNÉES
+        xls = pd.ExcelFile(uploaded_file)
+        df_mkt = pd.read_excel(xls, 'Demande'); df_mkt.columns = df_mkt.columns.str.strip()
+        df_prod = pd.read_excel(xls, 'Production'); df_prod.columns = df_prod.columns.str.strip()
+        df_fin = pd.read_excel(xls, 'Finance_Achats'); df_fin.columns = df_fin.columns.str.strip()
+
         # =================================================================
         # 2. SYSTÈME DE FILTRE PAR PRODUIT (Visualisation)
         # =================================================================
