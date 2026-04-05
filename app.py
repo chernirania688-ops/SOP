@@ -20,6 +20,17 @@ class StreamlitRedirect:
 
 st.set_page_config(page_title="S&OP AI Simulator", layout="wide", page_icon="🏭")
 
+ st.subheader("🔍 Analyse par Produit")
+ liste_produits = ["Tous les produits"] + list(df_mkt['Produit'].unique())
+selected_prod = st.selectbox("Sélectionnez un produit pour filtrer la vue :", liste_produits)
+# Filtrage des données pour l'affichage
+        if selected_prod == "Tous les produits":
+            view_mkt, view_prod, view_fin = df_mkt, df_prod, df_fin
+        else:
+            view_mkt = df_mkt[df_mkt['Produit'] == selected_prod]
+            view_prod = df_prod[df_prod['Produit'] == selected_prod]
+            view_fin = df_fin[df_fin['Produit'] == selected_prod]
+
 # --- BARRE LATÉRALE ---
 st.sidebar.title("🛠️ Configuration")
 with st.sidebar.expander("📖 Format Excel Requis", expanded=False):
