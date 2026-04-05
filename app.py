@@ -18,138 +18,159 @@ class StreamlitRedirect:
         self.placeholder.code(self.output)
     def flush(self): pass
 
+# --- CONFIGURATION PAGE ---
 st.set_page_config(page_title="S&OP AI Simulator", layout="wide", page_icon="🏭")
 
 # --- BARRE LATÉRALE ---
 st.sidebar.title("🛠️ Configuration")
 with st.sidebar.expander("📖 Format Excel Requis", expanded=False):
-    st.write("Onglet **Demande**: Produit, Marketing_Forecast, Sales_Orders")
-    st.write("Onglet **Production**: Produit, Capacity, Stock_Level")
-    st.write("Onglet **Finance_Achats**: Produit, Material_Cost, Margin_Unit, Supplier_LeadTime")
+     st.write("Onglet Demande: Produit, Forecast, Sales_Orders")
+     st.write("Onglet Production: Produit, Capacity, Stock_Level")
+     st.write("Onglet Finance_Achats: Produit, Material_Cost, Margin_Unit, Supplier_LeadTime")
 
 uploaded_file = st.sidebar.file_uploader("📥 Charger SOP_Data.xlsx", type=['xlsx'])
 
-st.title("🏭 Pilotage Stratégique & Simulateur S&OP")
-st.markdown("---")
-
 if uploaded_file is not None:
+    # --- CHARGEMENT ET NETTOYAGE ---
     try:
-        # 1. LECTURE ET NETTOYAGE DES DONNÉES
         xls = pd.ExcelFile(uploaded_file)
-        onglets_requis = ['Demande', 'Production', 'Finance_Achats']
+        df_mkt = pd.read_excel(xls, 'Demande')
+        df_prod = pd.read_excel(xls, 'Production')
+        df_fin = pd.read_excel(xls, 'Finance_Achats')
         
-        if not all(sheet in xls.sheet_names for sheet in onglets_requis):
-            st.error(f"❌ Structure incorrecte ! Onglets requis : {onglets_requis}")
-            st.stop()
-
-        df_mkt = pd.read_excel(xls, 'Demande'); df_mkt.columns = df_mkt.columns.str.strip()
-        df_prod = pd.read_excel(xls, 'Production'); df_prod.columns = df_prod.columns.str.strip()
-        df_fin = pd.read_excel(xls, 'Finance_Achats'); df_fin.columns = df_fin.columns.str.strip()
-
-        # 2. KPIs ANALYTIQUES
-        st.subheader("📊 Indicateurs Clés de Performance (Situation Initiale)")
-        total_demand = df_mkt['Forecast'].sum()
-        total_capacity = df_prod['Capacity'].sum()
-        saturation = (total_demand / total_capacity) * 100 if total_capacity > 0 else 0
-        alertes_achats = df_fin[df_fin['Supplier_LeadTime'] > 30].shape[0]
-
-        kpi1, kpi2, kpi3, kpi4 = st.columns(4)
-        kpi1.metric("Demande Globale", f"{total_demand:,.0f} u")
-        kpi2.metric("Capacité Usine", f"{total_capacity:,.0f} u")
-        kpi3.metric("Taux de Saturation", f"{saturation:.1f} %", delta=f"{saturation-100:.1f}%", delta_color="inverse")
-        kpi4.metric("Risques Achats (>30j)", f"{alertes_achats} alertes")
-
-        # 3. GRAPHIQUES PLOTLY
-        col_v1, col_v2 = st.columns(2)
-        with col_v1:
-            fig_comp = go.Figure()
-            fig_comp.add_trace(go.Bar(x=df_mkt['Produit'], y=df_mkt['Forecast'], name='Demande', marker_color='#007bff'))
-            fig_comp.add_trace(go.Bar(x=df_prod['Produit'], y=df_prod['Capacity'], name='Capacité', marker_color='#ff7f0e'))
-            fig_comp.update_layout(title="Équilibre Offre vs Demande par Produit", barmode='group', height=350)
-            st.plotly_chart(fig_comp, use_container_width=True)
-
-        with col_v2:
-            fig_margin = px.bar(df_fin, x='Produit', y='Margin_Unit', color='Margin_Unit', 
-                                title="Marge Unitaire par Produit (€)", color_continuous_scale='Greens', height=350)
-            st.plotly_chart(fig_margin, use_container_width=True)
-
-        st.markdown("---")
-
-        # 4. SIMULATEUR DE SCÉNARIOS "WHAT-IF"
-        st.subheader("🎭 Simulateur de Crise et d'Opportunité")
-        
-        col_sc1, col_sc2 = st.columns([1, 1])
-        with col_sc1:
-            type_evenement = st.radio("Sélectionnez l'événement à simuler :",["🟢 Nominal (Aucun problème)", "🔴 Aléa de Production", "🔵 Pic de Demande", "🟠 Inflation des Coûts", "🟣 Événement Personnalisé"]
-            )
-
-        with col_sc2:
-            contexte_simulation = "SITUATION NORMALE : Aucun problème particulier."
-            
-            if type_evenement == "🔴 Aléa de Production":
-                pct_baisse = st.slider("Baisse de capacité usine (%)", 10, 100, 30)
-                contexte_simulation = f"CRISE PRODUCTION : La capacité totale de l'usine est réduite de {pct_baisse}%. L'agent Supply doit impérativement alerter sur les manques et l'Orchestrateur doit sacrifier des produits."
-                st.warning(f"⚠️ Simulation : Perte de {pct_baisse}% de capacité.")
-            
-            elif type_evenement == "🔵 Pic de Demande":
-                pct_hausse = st.slider("Hausse soudaine de la demande (%)", 10, 200, 50)
-                contexte_simulation = f"PIC DEMANDE : La demande augmente de {pct_hausse}%. L'agent Marketing doit l'intégrer et la Supply Chain doit dire si c'est fabricable."
-                st.info(f"📈 Simulation : Hausse des ventes de {pct_hausse}%.")
-                
-            elif type_evenement == "🟠 Inflation des Coûts":
-                pct_infl = st.slider("Hausse des coûts matières (%)", 10, 100, 20)
-                contexte_simulation = f"INFLATION : Les coûts d'achat (Material_Cost) augmentent de {pct_infl}%. La Finance doit recalculer la marge à la baisse."
-                st.error(f"💰 Simulation : Inflation de {pct_infl}%.")
-                
-            elif type_evenement == "🟣 Événement Personnalisé":
-                txt_libre = st.text_area("Décrivez la situation :", "Ex: Grève des dockers, retard fournisseur de 3 semaines...")
-                contexte_simulation = f"ÉVÉNEMENT SPÉCIFIQUE : {txt_libre}. Les agents doivent s'adapter à cette situation exacte."
-
-        # 5. ORCHESTRATION AGENTIQUE
-        st.subheader("⚙️ Lancement de l'Intelligence Artificielle")
-        
-        if st.button("🚀 Analyser et Générer le Plan S&OP", use_container_width=True):
-            col_log, col_rep = st.columns([1, 1])
-            
-            with col_log:
-                st.info("🤖 **Logique des agents en temps réel :**")
-                log_placeholder = st.empty()
-                redir = StreamlitRedirect(log_placeholder)
-                old_stdout = sys.stdout
-                sys.stdout = redir
-
-                try:
-                    txt_mkt = df_mkt.to_string(); txt_prod = df_prod.to_string(); txt_fin = df_fin.to_string()
-
-                    # INJECTION DU SCÉNARIO DANS LES TÂCHES
-                    t1 = Task(description=f"CONTEXTE: {contexte_simulation}. Analyse l'onglet Demande: {txt_mkt}.", expected_output="Rapport demande.", agent=SOP.marketing)
-                    t2 = Task(description=f"CONTEXTE: {contexte_simulation}. Valide les volumes finaux.", expected_output="Volumes validés.", agent=SOP.sales)
-                    t3 = Task(description=f"CONTEXTE: {contexte_simulation}. Compare avec Production: {txt_prod}. Identifie les goulots d'étranglement.", expected_output="Faisabilité usine.", agent=SOP.supply)
-                    t4 = Task(description=f"CONTEXTE: {contexte_simulation}. Analyse Achats et risques délais: {txt_fin}.", expected_output="Risques fournisseurs.", agent=SOP.purchasing)
-                    t5 = Task(description=f"CONTEXTE: {contexte_simulation}. Calcule la rentabilité totale avec Finance_Achats: {txt_fin}.", expected_output="Bilan financier.", agent=SOP.finance)
-                    t6 = Task(description=f"""CONTEXTE: {contexte_simulation}. Rédige le Rapport Stratégique Final. 
-                              Il DOIT contenir: 1. Décisions sur les volumes. 2. Actions face à l'événement simulé. 3. Rentabilité finale.""", 
-                              expected_output="Plan S&OP Final.", agent=SOP.orchestrator)
-
-                    crew = Crew(
-                        agents=[SOP.marketing, SOP.sales, SOP.supply, SOP.purchasing, SOP.finance, SOP.orchestrator],
-                        tasks=[t1, t2, t3, t4, t5, t6],
-                        process=Process.sequential
-                    )
-
-                    resultat = crew.kickoff()
-                    st.session_state['resultat_sop'] = str(resultat)
-                finally:
-                    sys.stdout = old_stdout
-
-            with col_rep:
-                st.subheader("📋 Rapport de Décision S&OP")
-                if 'resultat_sop' in st.session_state:
-                    st.success("✅ Plan S&OP généré avec succès !")
-                    st.markdown(st.session_state['resultat_sop'])
-
+        for df in [df_mkt, df_prod, df_fin]:
+            df.columns = df.columns.str.strip()
     except Exception as e:
-        st.error(f"⚠️ Erreur de traitement : {e}")
+        st.error(f"❌ Erreur de lecture du fichier : {e}")
+        st.stop()
+
+    # --- AJOUT DU FILTRE PRODUIT ---
+    st.markdown("---")
+    liste_produits = ["Tous les produits"] + list(df_mkt['Produit'].unique())
+    selected_prod = st.selectbox("🔍 Analyser un produit spécifique (Vue Dashboard) :", liste_produits)
+
+    # --- INITIALISATION DES VARIABLES DE SIMULATION ---
+    df_mkt_sim = df_mkt.copy()
+    df_prod_sim = df_prod.copy()
+    contexte_simulation = "SITUATION NORMALE"
+
+    # --- SECTION 1 : SIMULATEUR DE SCÉNARIOS ---
+    st.title("🏭 Pilotage Stratégique & Simulateur S&OP")
+    with st.container(border=True):
+        st.subheader("🎭 Gestionnaire de Scénarios de Crise")
+        col_sc1, col_sc2 = st.columns([1, 2])
+        
+        with col_sc1:
+            type_ev = st.radio("Sélectionnez un événement :", 
+                               ["🟢 Nominal", "🔴 Aléa Production", "🔵 Pic Demande", "🟣 Personnalisé"], 
+                               index=0)
+        
+        with col_sc2:
+            if type_ev == "🔴 Aléa Production":
+                pct = st.slider("Baisse de capacité usine (%)", 10, 90, 30)
+                df_prod_sim['Capacity'] = df_prod['Capacity'] * (1 - pct/100)
+                contexte_simulation = f"CRISE : Capacité réduite de {pct}%."
+                st.warning(contexte_simulation)
+            elif type_ev == "🔵 Pic Demande":
+                pct = st.slider("Hausse de la demande marché (%)", 10, 150, 50)
+                df_mkt_sim['Forecast'] = df_mkt['Forecast'] * (1 + pct/100)
+                contexte_simulation = f"OPPORTUNITÉ/PIC : Hausse de demande de {pct}%."
+                st.info(contexte_simulation)
+            elif type_ev == "🟣 Personnalisé":
+                txt = st.text_area("Décrivez l'événement :", "Ex: Grève des dockers...")
+                contexte_simulation = f"ÉVÉNEMENT SPÉCIFIQUE : {txt}"
+
+    # --- SECTION 2 : DASHBOARD FILTRÉ ---
+    st.markdown("---")
+    st.subheader(f"📊 Diagnostic : {selected_prod}")
+
+    # Filtrage pour la vue visuelle
+    v_mkt = df_mkt_sim if selected_prod == "Tous les produits" else df_mkt_sim[df_mkt_sim['Produit'] == selected_prod]
+    v_prod = df_prod_sim if selected_prod == "Tous les produits" else df_prod_sim[df_prod_sim['Produit'] == selected_prod]
+    v_fin = df_fin if selected_prod == "Tous les produits" else df_fin[df_fin['Produit'] == selected_prod]
+
+    demand_sim = v_mkt['Forecast'].sum()
+    capa_sim = v_prod['Capacity'].sum()
+    sat_sim = (demand_sim / capa_sim * 100) if capa_sim > 0 else 0
+
+    k1, k2, k3, k4 = st.columns(4)
+    k1.metric("Demande", f"{demand_sim:,.0f} u")
+    k2.metric("Capacité", f"{capa_sim:,.0f} u")
+    k3.metric("Saturation", f"{sat_sim:.1f}%")
+    k4.metric("CA Potentiel", f"{(v_mkt['Forecast'] * v_fin['Margin_Unit']).sum():,.0f} €")
+
+    col_g1, col_g2 = st.columns(2)
+    with col_g1:
+        fig_bal = go.Figure()
+        fig_bal.add_trace(go.Bar(x=v_prod['Produit'], y=v_prod['Capacity'], name='Capacité', marker_color='#2ecc71', opacity=0.6))
+        fig_bal.add_trace(go.Bar(x=v_mkt['Produit'], y=v_mkt['Forecast'], name='Demande', marker_color='#e74c3c', width=0.4))
+        fig_bal.update_layout(title="Équilibre Offre/Demande", barmode='overlay', height=400)
+        st.plotly_chart(fig_bal, use_container_width=True)
+
+    with col_g2:
+        df_profit = pd.merge(v_mkt, v_fin, on='Produit')
+        df_profit['Marge_Totale'] = df_profit['Forecast'] * df_profit['Margin_Unit']
+        fig_tree = px.treemap(df_profit, path=['Produit'], values='Marge_Totale', color='Margin_Unit',
+                              color_continuous_scale='RdYlGn', title="Répartition de la Marge")
+        st.plotly_chart(fig_tree, use_container_width=True)
+
+    # --- SECTION 3 : ORCHESTRATION IA (Pleine Largeur + 6 Agents) ---
+    st.markdown("---")
+    st.subheader("🤖 Intelligence Agentique : Analyse Multi-Agents")
+
+    if st.button("🚀 Lancer le Processus S&OP Collaboratif", use_container_width=True):
+        st.info("🧠 Les 6 agents travaillent sur toute la page...")
+        log_placeholder = st.empty()
+        redir = StreamlitRedirect(log_placeholder)
+        old_stdout = sys.stdout
+        sys.stdout = redir
+        
+        try:
+            # Optimisation data (Head 15) pour éviter RateLimit
+            txt_mkt = df_mkt_sim.sort_values(by='Forecast', ascending=False).head(15)[['Produit', 'Forecast']].to_string()
+            txt_prod = df_prod_sim.sort_values(by='Capacity', ascending=True).head(15)[['Produit', 'Capacity']].to_string()
+            txt_fin = df_fin.head(15)[['Produit', 'Margin_Unit']].to_string()
+
+            # DÉFINITION DES 6 TÂCHES
+            t1 = Task(description=f"Marketing: Analyse demande {txt_mkt}.", agent=SOP.marketing, expected_output="Rapport demande.")
+            t2 = Task(description="Ventes: Valide les volumes finaux terrain.", agent=SOP.sales, expected_output="Rapport ventes.")
+            t3 = Task(description=f"Supply: Vérifie prod {txt_prod}.", agent=SOP.supply, expected_output="Rapport industriel.")
+            t4 = Task(description=f"Achats: Analyse risques composants {txt_fin}.", agent=SOP.purchasing, expected_output="Rapport achats.")
+            t5 = Task(description=f"Finance: Bilan rentabilité sur {txt_fin}.", agent=SOP.finance, expected_output="Bilan financier.")
+            t6 = Task(description=f"Directeur: Arbitre PIC final pour {contexte_simulation}.", agent=SOP.orchestrator, expected_output="Plan S&OP Final.")
+
+            crew = Crew(
+                agents=[SOP.marketing, SOP.sales, SOP.supply, SOP.purchasing, SOP.finance, SOP.orchestrator],
+                tasks=[t1, t2, t3, t4, t5, t6]
+            )
+            crew.kickoff()
+
+            # SAUVEGARDE DES 6 RAPPORTS
+            st.session_state['outputs'] = {
+                "📢 Marketing": t1.output.raw,
+                "🤝 Ventes": t2.output.raw,
+                "🏗️ Supply Chain": t3.output.raw,
+                "📦 Achats / Risques": t4.output.raw,
+                "💰 Finance": t5.output.raw,
+                "🏆 Rapport PIC Final": t6.output.raw
+            }
+            st.session_state['run_done'] = True
+        finally:
+            sys.stdout = old_stdout
+
+    # --- CONSULTATION DES RAPPORTS ---
+    if st.session_state.get('run_done'):
+        st.markdown("---")
+        st.subheader("📋 Consultation des rapports détaillés")
+        choix = st.multiselect(
+            "Quels rapports voulez-vous afficher ?", 
+            options=list(st.session_state['outputs'].keys()), 
+            default=["🏆 Rapport PIC Final"]
+        )
+        
+        for r in choix:
+            with st.expander(f"Voir {r}", expanded=True):
+                st.markdown(st.session_state['outputs'][r])
 
 else:
-    st.info("👋 Bienvenue ! Importez le fichier Excel dans le menu de gauche pour démarrer le simulateur.")
+    st.info("👋 Veuillez charger le fichier Excel pour commencer.")
