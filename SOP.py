@@ -9,13 +9,13 @@ from crewai import Agent, LLM
 if "GROQ_API_KEY" in st.secrets:
     # Si on est sur Streamlit Cloud (Utilise Groq)
     cerveau_local = LLM(
-        model="groq/llama-3.3-70b-versatile",
+        model="groq/llama-3.1-8b-versatile",
         api_key=st.secrets["GROQ_API_KEY"]
     )
 else:
     # Si on est sur votre PC (Utilise Ollama)
     cerveau_local = LLM(
-        model="ollama/llama3.2:1b",
+        model="ollama/llama3.1:8b",
         base_url="http://localhost:11434"
     )
 
@@ -28,6 +28,7 @@ marketing = Agent(
     goal='Extraire les tendances de l onglet Demande.',
     backstory='Tu es un expert en chiffres. Réponds toujours en français.',
     llm=cerveau_local,
+    max_rpm=2,
     verbose=True
 )
 
@@ -36,6 +37,7 @@ sales = Agent(
     goal='Valider les volumes de vente finaux.',
     backstory='Tu compares le Forecast et les Orders. Réponds toujours en français.',
     llm=cerveau_local,
+    max_rpm=2,
     verbose=True
 )
 
@@ -44,6 +46,7 @@ supply = Agent(
     goal='Comparer les besoins de vente avec la capacité réelle de l usine.',
     backstory='Tu es ingénieur en production. Réponds toujours en français.',
     llm=cerveau_local,
+    max_rpm=2,
     verbose=True
 )
 
@@ -52,6 +55,7 @@ purchasing = Agent(
     goal='Identifier les risques de rupture basés sur les délais fournisseurs.',
     backstory='Tu analyses les Lead Times. Réponds toujours en français.',
     llm=cerveau_local,
+    max_rpm=2,
     verbose=True
 )
 
@@ -61,7 +65,9 @@ finance = Agent(
     backstory="""Tu es un expert en calcul de coûts. Tu ne te contentes pas d'additionner les marges unitaires. 
     Tu multiplies CHAQUE volume validé par sa marge unitaire pour donner le profit total en euros. 
     Tu es très précis avec les chiffres.""",
-    llm=cerveau_local, verbose=True
+    llm=cerveau_local,
+    max_rpm=2,
+    verbose=True
 )
 
 orchestrator = Agent(
