@@ -1,105 +1,72 @@
 import streamlit as st
 import pandas as pd
-import plotly.express as px
-import plotly.graph_objects as go
 from crewai import Crew, Process, Task
-import SOP
-import sys
-import re
+import SOP 
 
-# --- CLASSE POUR CAPTURER LA DISCUSSION DES AGENTS ---
-class StreamlitRedirect:
-    def __init__(self, placeholder):
-        self.placeholder = placeholder
-        self.output = ""
-    def write(self, text):
-        clean_text = re.sub(r'\x1b\[[0-9;]*[a-zA-Z]', '', text)
-        self.output += clean_text
-        self.placeholder.code(self.output)
-    def flush(self): pass
+st.set_page_config(page_title="S&OP AI System", layout="wide")
 
-# --- CONFIGURATION PAGE ---
-st.set_page_config(page_title="S&OP AI Simulator", layout="wide", page_icon="🏭")
+st.title("🏭 Système S&OP Multi-Agents")
 
-# --- BARRE LATÉRALE ---
-st.sidebar.title("🛠️ Configuration")
-uploaded_file = st.sidebar.file_uploader("📥 Charger SOP_Data.xlsx", type=['xlsx'])
-
-st.title("🏭 Pilotage Stratégique & Simulateur S&OP")
-st.markdown("---")
+# --- CHARGEMENT DU FICHIER ---
+st.sidebar.header("📁 Importation")
+uploaded_file = st.sidebar.file_uploader("Fichier SOP_Data.xlsx", type=['xlsx'])
 
 if uploaded_file is not None:
     try:
-        # 1. LECTURE DES DONNÉES
         xls = pd.ExcelFile(uploaded_file)
-        df_mkt = pd.read_excel(xls, 'Demande'); df_mkt.columns = df_mkt.columns.str.strip()
-        df_prod = pd.read_excel(xls, 'Production'); df_prod.columns = df_prod.columns.str.strip()
-        df_fin = pd.read_excel(xls, 'Finance_Achats'); df_fin.columns = df_fin.columns.str.strip()
-
-        # 2. KPIs
-        st.subheader("📊 Indicateurs Clés")
-        k1, k2, k3 = st.columns(3)
-        total_demand = df_mkt['Forecast'].sum()
-        total_capacity = df_prod['Capacity'].sum()
-        k1.metric("Demande", f"{total_demand:,.0f}")
-        k2.metric("Capacité", f"{total_capacity:,.0f}")
-        k3.metric("Saturation", f"{(total_demand/total_capacity*100):.1f}%")
-
-        # 3. SCÉNARIOS
-        st.markdown("---")
-        type_evenement = st.radio("Simulation :", ["🟢 Nominal", "🔴 Aléa Production", "🔵 Pic Demande", "🟣 Personnalisé"])
         
-        contexte_simulation = "SITUATION NORMALE."
-        df_mkt_sim = df_mkt.copy()
-        df_prod_sim = df_prod.copy()
+        # Extraction stricte des 3 sources de données
+        data_mkt = pd.read_excel(xls, 'Demande').to_string()
+        data_prod = pd.read_excel(xls, 'Production').to_string()
+        data_fin = pd.read_excel(xls, 'Finance_Achats').to_string()
 
-        if type_evenement == "🔴 Aléa Production":
-            pct = st.slider("Baisse capacité (%)", 10, 90, 30)
-            df_prod_sim['Capacity'] = df_prod_sim['Capacity'] * (1 - pct/100)
-            contexte_simulation = f"CRISE : Capacité réduite de {pct}%."
-        elif type_evenement == "🔵 Pic Demande":
-            pct = st.slider("Hausse demande (%)", 10, 100, 40)
-            df_mkt_sim['Forecast'] = df_mkt_sim['Forecast'] * (1 + pct/100)
-            contexte_simulation = f"PIC : Hausse de {pct}%."
-        elif type_evenement == "🟣 Personnalisé":
-            txt = st.text_area("Description :", "Grève logistique...")
-            contexte_simulation = f"ÉVÉNEMENT : {txt}"
+        st.sidebar.success("3 Onglets chargés avec succès")
 
-        # 4. LANCEMENT IA
-        st.markdown("---")
-        if st.button("🚀 Analyser le Plan S&OP", use_container_width=True):
-            col_log, col_rep = st.columns([1, 1])
-            with col_log:
-                st.info("🤖 Logique des agents...")
-                log_placeholder = st.empty()
-                redir = StreamlitRedirect(log_placeholder)
-                old_stdout = sys.stdout
-                sys.stdout = redir
-                try:
-                    # Optimisation Rate Limit (Head 15)
-                    txt_mkt = df_mkt_sim[['Produit', 'Forecast']].head(15).to_string()
-                    txt_prod = df_prod_sim[['Produit', 'Capacity']].head(15).to_string()
-                    txt_fin = df_fin[['Produit', 'Margin_Unit']].head(15).to_string()
+        if st.button("🚀 Lancer l'analyse globale"):
+            with st.spinner("Analyse des 3 fichiers en cours..."):
+                
+                # --- TÂCHES STRICTES ---
+                
+                # Tâche 1 & 2 : Utilise l'onglet DEMANDE
+                t1 = Task(description=f"Analyse l onglet DEMANDE suivant : {data_mkt}. Liste les volumes par produit.", 
+                          expected_output="Résumé de la demande brute.", agent=SOP.marketing)
+                
+                t2 = Task(description=f"Basé sur l analyse marketing, valide un plan de vente final (en unités).", 
+                          expected_output="Plan de vente validé.", agent=SOP.sales)
 
-                    t1 = Task(description=f"Analyse: {txt_mkt}. Contexte: {contexte_simulation}", agent=SOP.marketing, expected_output="Rapport demande.")
-                    t2 = Task(description="Valide volumes.", agent=SOP.sales, expected_output="Volumes validés.")
-                    t3 = Task(description=f"Vérifie prod: {txt_prod}.", agent=SOP.supply, expected_output="Faisabilité.")
-                    t4 = Task(description="Analyse achats.", agent=SOP.purchasing, expected_output="Risques.")
-                    t5 = Task(description=f"Finance: {txt_fin}.", agent=SOP.finance, expected_output="Bilan.")
-                    t6 = Task(description="Rapport Final. Arbitre selon marge.", agent=SOP.orchestrator, expected_output="Plan S&OP.")
+                # Tâche 3 : Utilise l'onglet PRODUCTION
+                t3 = Task(description=f"Prends le plan de vente et compare-le à la CAPACITÉ dans : {data_prod}. Identifie les produits en surcharge.", 
+                          expected_output="Rapport de faisabilité usine.", agent=SOP.supply)
 
-                    crew = Crew(agents=[SOP.marketing, SOP.sales, SOP.supply, SOP.purchasing, SOP.finance, SOP.orchestrator], tasks=[t1, t2, t3, t4, t5, t6])
-                    resultat = crew.kickoff()
-                    st.session_state['res'] = str(resultat)
-                finally:
-                    sys.stdout = old_stdout
+                # Tâche 4 : Utilise l'onglet FINANCE_ACHATS (Partie Achats)
+                t4 = Task(description=f"Vérifie les SUPPLIER_LEADTIME dans : {data_fin}. Quels produits risquent une rupture ?", 
+                          expected_output="Analyse des risques achats.", agent=SOP.purchasing)
 
-            with col_rep:
-                if 'res' in st.session_state:
-                    st.success("✅ Rapport généré")
-                    st.markdown(st.session_state['res'])
+                # Tâche 5 : Utilise l'onglet FINANCE_ACHATS (Partie Finance)
+                t5 = Task(description=f"Utilise MARGIN_UNIT dans : {data_fin} pour calculer le profit total du plan validé.", 
+                          expected_output="Bilan financier (Marge totale).", agent=SOP.finance)
+
+                # Tâche 6 : SYNTHÈSE TOTALE (L'Orchestrateur)
+                t6 = Task(description="""Rédige le rapport S&OP final. 
+                          Tu DOIS inclure ces 3 points obligatoirement :
+                          1. Volumes validés (issus de l onglet Demande)
+                          2. Alertes Capacités (issues de l onglet Production)
+                          3. Rentabilité et Risques Achats (issus de l onglet Finance_Achats)
+                          REMARQUE : Ne parle pas de musique ou de cinéma, reste sur les données techniques.""", 
+                          expected_output="Plan Industriel et Commercial (PIC) Final.", agent=SOP.orchestrator)
+
+                # Exécution
+                equipe = Crew(
+                    agents=[SOP.marketing, SOP.sales, SOP.supply, SOP.purchasing, SOP.finance, SOP.orchestrator],
+                    tasks=[t1, t2, t3, t4, t5, t6],
+                    process=Process.sequential
+                )
+
+                resultat = equipe.kickoff()
+                st.markdown("### 📋 Rapport Stratégique Final (Synthèse des 3 fichiers)")
+                st.write(str(resultat))
 
     except Exception as e:
-        st.error(f"⚠️ Erreur : {e}")
+        st.error(f"Erreur : {e}. Vérifiez que les onglets 'Demande', 'Production' et 'Finance_Achats' existent.")
 else:
-    st.info("👋 Veuillez charger le fichier Excel.")
+    st.info("Veuillez importer le fichier Excel pour commencer.")
