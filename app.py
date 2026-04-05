@@ -154,7 +154,7 @@ if uploaded_file is not None:
             "💰 Finance": t5.output.raw, "🏆 RAPPORT FINAL & TABLEAU": t6.output.raw
         }
         st.session_state['run_done'] = True
-        finally:
+    finally:
         sys.stdout = sys.__stdout__
            
 
