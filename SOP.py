@@ -6,11 +6,12 @@ from langchain_experimental.utilities import PythonREPL
 # =================================================================
 # 1. DÉFINITION DU CERVEAU
 # =================================================================
-if "GROQ_API_KEY" in st.secrets:
-    cerveau_local = LLM(
-        model="groq/llama-3.3-70b-versatile", 
-        api_key=st.secrets["GROQ_API_KEY"]
-    )
+if"GROQ_API_KEY" in st.secrets:
+# Si on est sur Streamlit Cloud (Utilise Groq)
+cerveau_local = LLM(
+model="groq/llama-3.3-70b-versatile",
+api_key=st.secrets["GROQ_API_KEY"]
+)
 else:
     cerveau_local = LLM(
         model="ollama/llama3.2:1b",
