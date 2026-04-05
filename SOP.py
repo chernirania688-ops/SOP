@@ -1,68 +1,77 @@
-import os
+import streamlit as st
 from crewai import Agent, LLM
 
-# Configuration pour le Cloud (Groq) ou le Local (Ollama)
-# Sur le Cloud, on récupérera la clé depuis les "Secrets" de Streamlit
-api_key = os.getenv("GROQ_API_KEY") 
+# =================================================================
+# 1. DÉFINITION DU CERVEAU (Variable : cerveau_local)
+# =================================================================
 
-if api_key:
-    # Configuration CLOUD (Groq) - Ultra rapide
-    cerveau = LLM(
-        model="groq/llama-3.3-70b-versatile", 
-        api_key=api_key
+# Cette logique permet de basculer entre Groq (Cloud) et Ollama (Local)
+if "GROQ_API_KEY" in st.secrets:
+    # Si on est sur Streamlit Cloud (Utilise Groq)
+    cerveau_local = LLM(
+        model="groq/llama-3.3-70b-versatile",
+        api_key=st.secrets["GROQ_API_KEY"]
     )
 else:
+    # Si on est sur votre PC (Utilise Ollama)
+    cerveau_local = LLM(
+        model="ollama/llama3.2:1b",
+        base_url="http://localhost:11434"
+    )
 
-# ... GARDEZ LE RESTE DE VOS AGENTS ICI (en utilisant 'llm=cerveau') ...
-   cerveau_local = LLM(
-    model="ollama/llama3.2:1b", 
-    base_url="http://localhost:11434",
-    timeout=2200,
-    temperature=0.1
-)
+# =================================================================
+# 2. DÉFINITION DES AGENTS (Vérifiez qu'ils utilisent bien cerveau_local)
+# =================================================================
 
-# 2. DÉFINITION DES 6 AGENTS
 marketing = Agent(
     role='Analyste Marketing',
     goal='Extraire les tendances de l onglet Demande.',
-    backstory='Tu es un expert en chiffres. Tu ne commentes que les données présentes dans le fichier.',
-    llm=cerveau_local, verbose=True
+    backstory='Tu es un expert en chiffres. Réponds toujours en français.',
+    llm=cerveau_local,
+    verbose=True
 )
 
 sales = Agent(
     role='Responsable des Ventes',
     goal='Valider les volumes de vente finaux.',
-    backstory='Tu compares le Forecast et les Orders. Tu donnes un chiffre ferme.',
-    llm=cerveau_local, verbose=True
+    backstory='Tu compares le Forecast et les Orders. Réponds toujours en français.',
+    llm=cerveau_local,
+    verbose=True
 )
 
 supply = Agent(
     role='Planificateur de Production',
     goal='Comparer les besoins de vente avec la capacité réelle de l usine.',
-    backstory='Tu es ingénieur. Si la demande > capacité, tu dois alerter immédiatement.',
-    llm=cerveau_local, verbose=True
+    backstory='Tu es ingénieur en production. Réponds toujours en français.',
+    llm=cerveau_local,
+    verbose=True
 )
 
 purchasing = Agent(
     role='Acheteur Industriel',
     goal='Identifier les risques de rupture basés sur les délais fournisseurs.',
-    backstory='Tu analyses les Lead Times. Si un délai > 30 jours, c est un risque.',
-    llm=cerveau_local, verbose=True
+    backstory='Tu analyses les Lead Times. Réponds toujours en français.',
+    llm=cerveau_local,
+    verbose=True
 )
 
 finance = Agent(
-    role='Contrôleur de Gestion',
-    goal='Calculer la marge brute totale du plan.',
-    backstory='Tu multiplies les volumes par la marge unitaire du fichier Finance.',
+    role='Contrôleur de Gestion Industriel',
+    goal='Calculer la rentabilité financière globale (Volume x Marge).',
+    backstory="""Tu es un expert en calcul de coûts. Tu ne te contentes pas d'additionner les marges unitaires. 
+    Tu multiplies CHAQUE volume validé par sa marge unitaire pour donner le profit total en euros. 
+    Tu es très précis avec les chiffres.""",
     llm=cerveau_local, verbose=True
 )
 
 orchestrator = Agent(
-    role='Directeur S&OP',
-    goal='Créer la synthèse finale équilibrée entre Vente, Production et Finance.',
-    backstory='Tu es le chef. Ton rapport final doit citer des chiffres des 3 fichiers.',
+    role='Directeur S&OP (COO)',
+    goal='Piloter la performance globale et valider le Plan Industriel et Commercial (PIC).',
+    backstory="""Tu es le garant de la stratégie. Ton rapport final doit être structuré, 
+    professionnel et inclure des indicateurs clés (KPIs). Tu arbitres les conflits en favorisant 
+    les produits à plus forte marge quand la capacité manque.""",
     llm=cerveau_local, verbose=True
 )
-# Ce bloc empêche le script de se lancer tout seul lors de l'import par Streamlit
+# Empêche l'exécution automatique lors de l'import
 if __name__ == "__main__":
-    print("Script chargé en mode bibliothèque. Utilisez app.py pour lancer l'interface.")
+    print("Le module SOP est prêt.")
