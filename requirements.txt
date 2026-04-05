@@ -1,6 +1,9 @@
-crewai==0.100.0
+crewai
+langchain-openai
+langchain-experimental
 streamlit
 pandas
 openpyxl
+python-dotenv
 litellm
 plotly
