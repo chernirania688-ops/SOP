@@ -144,7 +144,7 @@ if uploaded_file is not None:
         fig_scatter.update_traces(textposition='top center')
         fig_scatter.add_hline(y=df_matrix['Margin_Unit'].mean(), line_dash="dot", annotation_text="Marge Moyenne")
 
-      st.plotly_chart(fig_scatter, use_container_width=True)
+        st.plotly_chart(fig_scatter, use_container_width=True)
 
         # 5. SCÉNARIOS (WHAT-IF)
         st.markdown("---")
