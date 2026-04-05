@@ -80,14 +80,23 @@ if uploaded_file is not None:
                                   color='Produit', title="Risque Délais vs Rentabilité")
             st.plotly_chart(fig_risk, use_container_width=True)
 
-        # --- SIMULATEUR DE SCÉNARIOS (WHAT-IF) ---
+      # --- SIMULATEUR DE SCÉNARIOS (WHAT-IF) ---
         st.markdown("---")
         st.subheader("🎭 Simulateur de Crise et d'Opportunité")
         
         col_sc1, col_sc2 = st.columns([1, 1])
         with col_sc1:
-            type_evenement = st.radio("Sélectionnez l'événement à simuler :", 
-                                      ["🟢 Nominal", "🔴 Aléa Production", "🔵 Pic de Demande", "🟠 Inflation Coûts"])
+            # Ajout de l'option 🟣 dans la liste
+            type_evenement = st.radio(
+                "Sélectionnez l'événement à simuler :", 
+                [
+                    "🟢 Nominal", 
+                    "🔴 Aléa Production", 
+                    "🔵 Pic de Demande", 
+                    "🟠 Inflation Coûts", 
+                    "🟣 Événement Personnalisé"
+                ]
+            )
 
         # Initialisation des copies pour la simulation IA
         df_mkt_sim = df_mkt.copy()
@@ -100,15 +109,27 @@ if uploaded_file is not None:
                 pct = st.slider("Baisse de capacité (%)", 10, 90, 30)
                 df_prod_sim['Capacity'] = df_prod_sim['Capacity'] * (1 - pct/100)
                 contexte_simulation = f"CRISE : Baisse de {pct}% de la capacité de production."
+            
             elif type_evenement == "🔵 Pic de Demande":
                 pct = st.slider("Hausse de demande (%)", 10, 100, 40)
                 df_mkt_sim['Forecast'] = df_mkt_sim['Forecast'] * (1 + pct/100)
                 contexte_simulation = f"OPPORTUNITÉ : Hausse de {pct}% de la demande marché."
+            
             elif type_evenement == "🟠 Inflation Coûts":
                 pct = st.slider("Hausse des coûts (%)", 10, 100, 20)
                 df_fin_sim['Material_Cost'] = df_fin_sim['Material_Cost'] * (1 + pct/100)
+                # On réduit la marge mécaniquement
                 df_fin_sim['Margin_Unit'] = df_fin_sim['Margin_Unit'] - (df_fin_sim['Material_Cost'] * (pct/100))
                 contexte_simulation = f"ALERTE : Inflation de {pct}% sur les matières premières."
+            
+            # --- NOUVEAU : ÉVÉNEMENT PERSONNALISÉ ---
+            elif type_evenement == "🟣 Événement Personnalisé":
+                txt_libre = st.text_area(
+                    "Décrivez la situation (l'IA va l'interpréter) :", 
+                    "Ex: Grève des dockers au port de Marseille, retard de livraison des composants de 4 semaines, ou fermeture temporaire d'une ligne de production."
+                )
+                contexte_simulation = f"ÉVÉNEMENT SPÉCIFIQUE DÉCRIT PAR L'UTILISATEUR : {txt_libre}. Les agents doivent analyser l'impact de cette situation précise sur le plan S&OP."
+                st.info("💡 L'IA adaptera son raisonnement à votre description.")
 
         # --- BOUTON DE LANCEMENT IA ---
         st.markdown("---")
