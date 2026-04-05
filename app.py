@@ -60,31 +60,91 @@ if uploaded_file is not None:
             view_fin = df_fin[df_fin['Produit'] == selected_prod]
 
         # 3. KPIs DYNAMIQUES
+       # --- CALCULS AVANT/APRÈS ---
+        demand_initial = df_mkt['Forecast'].sum()
+        demand_sim = df_mkt_sim['Forecast'].sum()
+        capa_initial = df_prod['Capacity'].sum()
+        capa_sim = df_prod_sim['Capacity'].sum()
+        
+        # --- AFFICHAGE DES KPIs AMÉLIORÉS ---
+        st.subheader("📊 Indicateurs de Performance (Impact Scénario)")
         k1, k2, k3, k4 = st.columns(4)
-        total_demand = view_mkt['Forecast'].sum()
-        total_capacity = view_prod['Capacity'].sum()
-        saturation = (total_demand / total_capacity * 100) if total_capacity > 0 else 0
-        marge_moyenne = view_fin['Margin_Unit'].mean()
-
-        k1.metric("Demande", f"{total_demand:,.0f} u")
-        k2.metric("Capacité", f"{total_capacity:,.0f} u")
-        k3.metric("Saturation", f"{saturation:.1f}%", delta=f"{saturation-100:.1f}%", delta_color="inverse")
-        k4.metric("Marge Moy.", f"{marge_moyenne:.2f} €")
-
-        # 4. GRAPHIQUES FILTRÉS
-        col_g1, col_g2 = st.columns(2)
+        
+        # KPI Demande avec delta
+        k1.metric(
+            label="Demande Totale", 
+            value=f"{demand_sim:,.0f} u", 
+            delta=f"{demand_sim - demand_initial:,.0f} u",
+            delta_color="inverse" if demand_sim > demand_initial else "normal"
+        )
+        
+        # KPI Capacité avec delta
+        k2.metric(
+            label="Capacité Usine", 
+            value=f"{capa_sim:,.0f} u", 
+            delta=f"{capa_sim - capa_initial:,.0f} u",
+            delta_color="normal"
+        )
+        
+        # KPI Saturation avec jauge de couleur
+        sat_sim = (demand_sim / capa_sim * 100) if capa_sim > 0 else 0
+        k3.metric(
+            label="Taux de Saturation", 
+            value=f"{sat_sim:.1f}%", 
+            delta=f"{sat_sim - 100:.1f}% au-dessus" if sat_sim > 100 else "Sous contrôle",
+            delta_color="inverse"
+        )
+        
+        # Valeur du stock ou Marge Risquée
+        marge_totale = (view_fin['Margin_Unit'] * view_mkt['Forecast']).sum()
+        k4.metric(label="Chiffre d'Affaires Potentiel", value=f"{marge_totale:,.0f} €")
         with col_g1:
+            # Création d'un graphique comparatif empilé
             fig_bal = go.Figure()
-            fig_bal.add_trace(go.Bar(x=view_mkt['Produit'], y=view_mkt['Forecast'], name='Demande', marker_color='#3498db'))
-            fig_bal.add_trace(go.Bar(x=view_prod['Produit'], y=view_prod['Capacity'], name='Capacité', marker_color='#e67e22'))
-            fig_bal.update_layout(title="Équilibre Offre/Demande", barmode='group', height=300)
+            
+            # Barre Capacité
+            fig_bal.add_trace(go.Bar(
+                x=view_prod['Produit'], y=view_prod['Capacity'],
+                name='Capacité Maximale', marker_color='#2ecc71',
+                opacity=0.6
+            ))
+            
+            # Barre Demande
+            fig_bal.add_trace(go.Bar(
+                x=view_mkt['Produit'], y=view_mkt['Forecast'],
+                name='Demande Client', marker_color='#e74c3c',
+                width=0.4 # Barre plus fine pour être "dans" l'autre
+            ))
+        
+            fig_bal.update_layout(
+                title="<b>Capacité vs Demande</b>",
+                barmode='overlay', # Superposition pour bien voir le dépassement
+                legend=dict(orientation="h", yanchor="bottom", y=1.02, xanchor="right", x=1),
+                margin=dict(l=20, r=20, t=60, b=20),
+                height=350
+            )
             st.plotly_chart(fig_bal, use_container_width=True)
+            st.subheader("🎯 Aide à la Décision : Matrice Volume vs Marge")
+        
+        # On fusionne les données pour le graphique
+        df_matrix = pd.merge(view_mkt, view_fin, on='Produit')
+        
+        fig_scatter = px.scatter(
+            df_matrix, 
+            x='Forecast', 
+            y='Margin_Unit',
+            size='Forecast', 
+            color='Margin_Unit',
+            hover_name='Produit',
+            text='Produit',
+            color_continuous_scale='RdYlGn',
+            title="Où couper en priorité ? (Haut-Droit = Priorité absolue)"
+        )
+        
+        fig_scatter.update_traces(textposition='top center')
+        fig_scatter.add_hline(y=df_matrix['Margin_Unit'].mean(), line_dash="dot", annotation_text="Marge Moyenne")
 
-        with col_g2:
-            fig_margin = px.bar(view_fin, x='Produit', y='Margin_Unit', color='Margin_Unit', 
-                                title="Marge par Produit (€)", color_continuous_scale='Greens')
-            fig_margin.update_layout(height=300)
-            st.plotly_chart(fig_margin, use_container_width=True)
+      st.plotly_chart(fig_scatter, use_container_width=True)
 
         # 5. SCÉNARIOS (WHAT-IF)
         st.markdown("---")
