@@ -71,7 +71,7 @@ if uploaded_file is not None:
         
         try:
             # Allègement data pour Groq
-            txt_m = df_mkt_sim.head(10).to_string(); txt_p = df_prod_sim.head(10).to_string(); txt_f = df_fin.head(10).to_string()
+            txt_m = df_mkt_sim.to_string(); txt_p = df_prod_sim.to_string(); txt_f = df_fin.to_string()
 
             t1 = Task(description=f"Marketing: Analyse {txt_m}.", agent=SOP.marketing, expected_output="Rapport demande.")
             t2 = Task(description="Sales: Valide volumes.", agent=SOP.sales, expected_output="Rapport ventes.")
