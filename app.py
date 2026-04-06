@@ -110,6 +110,11 @@ if uploaded_file is not None:
             txt_p = df_prod_sim[df_prod_sim['Produit'] == selected_prod].to_string()
             txt_f = df_fin_sim[df_fin_sim['Produit'] == selected_prod].to_string()
             instruction_focus = f"UNIQUEMENT le produit '{selected_prod}'"
+         # Conversion en texte pour l'IA
+        txt_m = df_m_ia.to_string(index=False)
+        txt_p = df_p_ia.to_string(index=False)
+        txt_f = df_f_ia.to_string(index=False)
+
         st.info(f"🧠 Analyse EXCLUSIVE pour : {instruction_focus}")
         log_placeholder = st.empty()
         redir = StreamlitRedirect(log_placeholder); sys.stdout = redir
@@ -118,7 +123,7 @@ if uploaded_file is not None:
             # Réduction data pour Rate Limit
             t_m = df_mkt_sim.head(10).to_string(); t_p = df_prod_sim.head(10).to_string(); t_f = df_fin.head(10).to_string()
 
-            t1 = Task(description=f"Marketing: Analyse la Demande pour {instruction_focus}.Donnees: {t_m}.Identifie les produits stratégique.", agent=SOP.marketing, expected_output="Analyse.")
+            t1 = Task(description=f"Marketing: Analyse la Demande pour {instruction_focus}.Donnees: {t_m}.Identifie les produits stratégique.INTERDICTION de parler d'un autre produit. Si tu ne vois qu'une ligne, analyse cette ligne uniquement.", agent=SOP.marketing, expected_output="Analyse.")
             t2 = Task(description="Ventes: Valide volumes pour {instruction_focus}.Signale les risques de perte de CA.", agent=SOP.sales, expected_output="Ventes.")
             t3 = Task(description=f"Supply: Gère goulots pour {instruction_focus}.Donnees: {t_p}.Pour chaque 'Goulot' ou 'Maintenance',propose une solution concréte.", agent=SOP.supply, expected_output="Production.")
             t4 = Task(description=f"Achats: Risques pour {instruction_focus}.Basé sur {t_f}.Liste les 3 plus gros risques fournisseurs.", agent=SOP.purchasing, expected_output="Achats.")
