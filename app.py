@@ -92,7 +92,7 @@ if uploaded_file:
         
         try:
             # OPTIMISATION DONNÉES (Top 5 produits pour éviter RateLimit)
-            df_top = df_mkt_sim.sort_values(by='Forecast', ascending=False)
+            df_top = df_mkt_sim.sort_values(by='Forecast', ascending=False).head(5)
             liste_top = df_top['Produit'].tolist()
             t_mkt = df_top[['Produit', 'Forecast']].to_string()
             t_prod = df_prod_sim[df_prod_sim['Produit'].isin(liste_top)][['Produit', 'Capacity', 'Machine_Status']].to_string()
