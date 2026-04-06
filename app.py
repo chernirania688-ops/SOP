@@ -94,6 +94,18 @@ if uploaded_file is not None:
     # --- LANCEMENT IA (Pleine Largeur) ---
     st.markdown("---")
     if st.button("🚀 Lancer le Processus S&OP Collaboratif", use_container_width=True):
+        if selected_prod == "Tous les produits":
+                # On garde le top 10 pour l'analyse globale
+                txt_m = df_mkt_sim.to_string()
+                txt_p = df_prod_sim.to_string()
+                txt_f = df_fin_sim.to_string()
+                scope_ia = "l'ensemble du catalogue "
+            else:
+                # On filtre les tableaux pour n'envoyer QUE la ligne du produit sélectionné
+                txt_m = df_mkt_sim[df_mkt_sim['Produit'] == selected_prod].to_string()
+                txt_p = df_prod_sim[df_prod_sim['Produit'] == selected_prod].to_string()
+                txt_f = df_fin_sim[df_fin_sim['Produit'] == selected_prod].to_string()
+                scope_ia = f"uniquement le produit {selected_prod}"
         st.info("🧠 Les 6 agents négocient sur toute la page...")
         log_placeholder = st.empty()
         redir = StreamlitRedirect(log_placeholder); sys.stdout = redir
@@ -102,13 +114,13 @@ if uploaded_file is not None:
             # Réduction data pour Rate Limit
             t_m = df_mkt_sim.head(10).to_string(); t_p = df_prod_sim.head(10).to_string(); t_f = df_fin.head(10).to_string()
 
-            t1 = Task(description=f"Marketing: Analyse la Demande {t_m}.Identifie les produits stratégique.", agent=SOP.marketing, expected_output="Analyse.")
-            t2 = Task(description="Ventes: Valide volumes.Signale les risques de perte de CA.", agent=SOP.sales, expected_output="Ventes.")
-            t3 = Task(description=f"Supply: Gère goulots {t_p}.Pour chaque 'Goulot' ou 'Maintenance',propose une solution concréte.", agent=SOP.supply, expected_output="Production.")
-            t4 = Task(description=f"Achats: Risques {t_f}.Liste les 3 plus gros risques fournisseurs.", agent=SOP.purchasing, expected_output="Achats.")
-            t5 = Task(description=f"Finance:  Calcule le profit {t_f}.", agent=SOP.finance, expected_output="Finance.")
+            t1 = Task(description=f"Marketing: Analyse la Demande pour {scope_ia}.Donnees: {t_m}.Identifie les produits stratégique.", agent=SOP.marketing, expected_output="Analyse.")
+            t2 = Task(description="Ventes: Valide volumes pour {scope_ia}.Signale les risques de perte de CA.", agent=SOP.sales, expected_output="Ventes.")
+            t3 = Task(description=f"Supply: Gère goulots pour {scope_ia}.Donnees: {t_p}.Pour chaque 'Goulot' ou 'Maintenance',propose une solution concréte.", agent=SOP.supply, expected_output="Production.")
+            t4 = Task(description=f"Achats: Risques pour {scope_ia}.Basé sur {t_f}.Liste les 3 plus gros risques fournisseurs.", agent=SOP.purchasing, expected_output="Achats.")
+            t5 = Task(description=f"Finance:  Calcule le profit pour {scope_ia}.Basé sur {t_f}.", agent=SOP.finance, expected_output="Finance.")
             t6 = Task(
-                        description=f"""Directeur S&OP: Rédige la décision finale pour le scénario pour {contexte_sim}.
+                        description=f"""Directeur S&OP: Rédige la décision finale pour {scope_ia} face au scénario: {contexte_sim}.
                         TU DOIS ABSOLUMENT SUIVRE CE PLAN :
                         1. SYNTHÈSE DE LA SITUATION : Rappelle le scénario et le risque majeur.
                         2. ANALYSE OFFRE/DEMANDE : Résume les points bloquants (Goulots, Lead Times).
