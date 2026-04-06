@@ -1,7 +1,7 @@
 import streamlit as st
 from crewai import Agent, LLM
 
-# --- 1. DÉFINITION DU CERVEAU ---
+# --- DÉFINITION DU CERVEAU ---
 if "GROQ_API_KEY" in st.secrets:
     cerveau_local = LLM(
         model="groq/llama-3.1-8b-instant", 
@@ -10,48 +10,48 @@ if "GROQ_API_KEY" in st.secrets:
 else:
     cerveau_local = LLM(model="ollama/llama3.1:8b", base_url="http://localhost:11434")
 
-# --- 2. DÉFINITION DES 6 AGENTS ---
+# --- VOS 6 AGENTS ---
 marketing = Agent(
     role='Directeur Marketing Stratégique',
     goal='Analyser la demande et définir les priorités de marque.',
-    backstory="Tu es le gardien de l'image de marque. On ne supprime JAMAIS les Smartphones.",
+    backstory="Tu es le gardien de l'image de marque. Règle d'or : On ne supprime JAMAIS les Smartphones.",
     llm=cerveau_local, verbose=True, max_rpm=1
 )
 
 sales = Agent(
     role='Directeur Commercial',
-    goal='Valider la réalité des ventes.',
+    goal='Valider la réalité des ventes et sécuriser le chiffre d affaires.',
     backstory="Tu compares le Forecast et les Sales_Orders.",
     llm=cerveau_local, verbose=True, max_rpm=1
 )
 
 supply = Agent(
-    role='Directeur Industriel',
-    goal='Résoudre les goulots d étranglement.',
-    backstory="Si Machine_Status est Goulot, tu proposes des solutions.",
+    role='Directeur Industriel / Supply Chain',
+    goal='Résoudre les goulots d étranglement et gérer les pannes.',
+    backstory="Tu es un ingénieur pragmatique. Si Machine_Status est 'Goulot', tu proposes des solutions.",
     llm=cerveau_local, verbose=True, max_rpm=1
 )
 
 purchasing = Agent(
-    role='Responsable Achats',
-    goal='Sécuriser les composants.',
-    backstory="Tu proposes des fournisseurs alternatifs.",
+    role='Responsable Achats & Logistique',
+    goal='Sécuriser les composants et réduire les lead times.',
+    backstory="Si Supplier_LeadTime > 45 jours, tu es en alerte rouge.",
     llm=cerveau_local, verbose=True, max_rpm=1
 )
 
 finance = Agent(
     role='CFO (Directeur Financier)',
-    goal='Maximiser le profit net.',
-    backstory="Tu es obsédé par le Profit Total.",
+    goal='Maximiser le profit net et optimiser le cash-flow.',
+    backstory="Tu es obsédé par le Profit Total (Volume x Marge).",
     llm=cerveau_local, verbose=True, max_rpm=1
 )
 
 orchestrator = Agent(
-    role='Directeur S&OP',
+    role='COO / Directeur S&OP',
     goal='Rédiger le PIC final et trancher les conflits.',
-    backstory="Tu dois obligatoirement produire un Tableau de Synthèse final.",
+    backstory="Tu es le chef d'orchestre. Tu dois obligatoirement produire un Tableau de Synthèse final.",
     llm=cerveau_local, verbose=True, max_rpm=1
 )
 
 if __name__ == "__main__":
-    print("Module SOP prêt.")
+    print("Module SOP prêt avec 6 agents.")
