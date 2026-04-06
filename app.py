@@ -7,6 +7,7 @@ import SOP
 import sys
 import re
 
+# --- REDIRECTION DES LOGS ---
 class StreamlitRedirect:
     def __init__(self, placeholder):
         self.placeholder = placeholder
@@ -19,6 +20,7 @@ class StreamlitRedirect:
 
 st.set_page_config(page_title="S&OP AI Simulator", layout="wide", page_icon="🏭")
 
+# --- SIDEBAR ET CHARGEMENT ---
 st.sidebar.title("🛠️ Configuration")
 uploaded_file = st.sidebar.file_uploader("📥 Charger SOP_Data.xlsx", type=['xlsx'])
 
@@ -30,32 +32,36 @@ if uploaded_file is not None:
         df_fin = pd.read_excel(xls, 'Finance_Achats')
         for df in [df_mkt, df_prod, df_fin]: df.columns = df.columns.str.strip()
     except Exception as e:
-        st.error(f"Erreur fichier : {e}"); st.stop()
+        st.error(f"❌ Erreur : {e}"); st.stop()
 
-    st.markdown("---")
-    selected_prod = st.selectbox("🔍 Analyser un produit :", ["Tous les produits"] + list(df_mkt['Produit'].unique()))
+    st.title("🏭 Pilotage Stratégique & Simulateur S&OP")
     
-    df_mkt_sim = df_mkt.copy(); df_prod_sim = df_prod.copy()
-    contexte_simulation = "SITUATION NORMALE"
+    # --- FILTRE PRODUIT ---
+    selected_prod = st.selectbox("🔍 Analyser un produit spécifique :", ["Tous les produits"] + list(df_mkt['Produit'].unique()))
+    
+    df_mkt_sim = df_mkt.copy(); df_prod_sim = df_prod.copy(); df_fin_sim = df_fin.copy()
+    contexte_sim = "SITUATION NORMALE"
 
+    # --- SIMULATEUR ---
     with st.container(border=True):
-        type_ev = st.radio("Simulation :", ["🟢 Nominal", "🔴 Aléa Production", "🔵 Pic Demande", "🟣 Personnalisé"])
+        st.subheader("🎭 Gestionnaire de Scénarios")
+        type_ev = st.radio("Sélectionnez un événement :", ["🟢 Nominal", "🔴 Aléa Production", "🔵 Pic Demande", "🟣 Personnalisé"], horizontal=True)
         if type_ev == "🔴 Aléa Production":
             pct = st.slider("Baisse capacité (%)", 10, 90, 30)
             df_prod_sim['Capacity'] = df_prod['Capacity'] * (1 - pct/100)
-            contexte_simulation = f"CRISE : Capacité réduite de {pct}%."
+            contexte_sim = f"CRISE : Capacité réduite de {pct}%."
         elif type_ev == "🔵 Pic Demande":
             pct = st.slider("Hausse demande (%)", 10, 150, 50)
             df_mkt_sim['Forecast'] = df_mkt['Forecast'] * (1 + pct/100)
-            contexte_simulation = f"PIC : Hausse demande de {pct}%."
+            contexte_sim = f"PIC : Hausse demande de {pct}%."
         elif type_ev == "🟣 Personnalisé":
-            txt = st.text_area("Description :", "Ex: Grève...")
-            contexte_simulation = f"ÉVÉNEMENT : {txt}"
+            txt = st.text_area("Description :", "Ex: Grève des dockers...")
+            contexte_sim = f"ÉVÉNEMENT : {txt}"
 
-    # --- DASHBOARD ---
+    # --- DASHBOARD (KPIs & GRAPHES) ---
     v_mkt = df_mkt_sim if selected_prod == "Tous les produits" else df_mkt_sim[df_mkt_sim['Produit'] == selected_prod]
     v_prod = df_prod_sim if selected_prod == "Tous les produits" else df_prod_sim[df_prod_sim['Produit'] == selected_prod]
-    v_fin = df_fin if selected_prod == "Tous les produits" else df_fin[df_fin['Produit'] == selected_prod]
+    v_fin = df_fin_sim if selected_prod == "Tous les produits" else df_fin_sim[df_fin_sim['Produit'] == selected_prod]
 
     k1, k2, k3, k4 = st.columns(4)
     k1.metric("Demande", f"{v_mkt['Forecast'].sum():,.0f}")
@@ -63,39 +69,49 @@ if uploaded_file is not None:
     k3.metric("Saturation", f"{(v_mkt['Forecast'].sum()/v_prod['Capacity'].sum()*100):.1f}%" if v_prod['Capacity'].sum()>0 else "0%")
     k4.metric("Profit", f"{(v_mkt['Forecast'] * v_fin['Margin_Unit']).sum():,.0f} €")
 
-    # --- SECTION IA ---
+    col_g1, col_g2 = st.columns(2)
+    with col_g1:
+        fig = go.Figure()
+        fig.add_trace(go.Bar(x=v_prod['Produit'], y=v_prod['Capacity'], name='Capacité', marker_color='#2ecc71', opacity=0.6))
+        fig.add_trace(go.Bar(x=v_mkt['Produit'], y=v_mkt['Forecast'], name='Demande', marker_color='#e74c3c', width=0.4))
+        fig.update_layout(title="Équilibre Offre/Demande", barmode='overlay')
+        st.plotly_chart(fig, use_container_width=True)
+    with col_g2:
+        df_p = pd.merge(v_mkt, v_fin, on='Produit'); df_p['M_Totale'] = df_p['Forecast'] * df_p['Margin_Unit']
+        st.plotly_chart(px.treemap(df_p, path=['Produit'], values='M_Totale', title="Répartition Marge"), use_container_width=True)
+
+    # --- LANCEMENT IA (Pleine Largeur) ---
     st.markdown("---")
     if st.button("🚀 Lancer le Processus S&OP Collaboratif", use_container_width=True):
-        st.info("🧠 Les 6 agents travaillent...")
-        log_p = st.empty(); redir = StreamlitRedirect(log_p); sys.stdout = redir
+        st.info("🧠 Les 6 agents négocient sur toute la page...")
+        log_placeholder = st.empty()
+        redir = StreamlitRedirect(log_placeholder); sys.stdout = redir
         
         try:
-            # Allègement data pour Groq
-            txt_m = df_mkt_sim.to_string(); txt_p = df_prod_sim.to_string(); txt_f = df_fin.to_string()
+            # Réduction data pour Rate Limit
+            t_m = df_mkt_sim.head(10).to_string(); t_p = df_prod_sim.head(10).to_string(); t_f = df_fin.head(10).to_string()
 
-            t1 = Task(description=f"Marketing: Analyse {txt_m}.", agent=SOP.marketing, expected_output="Rapport demande.")
-            t2 = Task(description="Sales: Valide volumes.", agent=SOP.sales, expected_output="Rapport ventes.")
-            t3 = Task(description=f"Supply: Gère goulots {txt_p}.", agent=SOP.supply, expected_output="Plan production.")
-            t4 = Task(description=f"Purchasing: Analyse risques {txt_f}.", agent=SOP.purchasing, expected_output="Rapport achats.")
-            t5 = Task(description=f"Finance: Calcul profit sur {txt_f}.", agent=SOP.finance, expected_output="Bilan financier.")
-            t6 = Task(description=f"Directeur: Arbitre PIC pour {contexte_simulation}. FAIT UN TABLEAU FINAL.", agent=SOP.orchestrator, expected_output="Plan S&OP Final avec Tableau.")
+            t1 = Task(description=f"Marketing: Analyse {t_m}.", agent=SOP.marketing, expected_output="Analyse.")
+            t2 = Task(description="Ventes: Valide volumes.", agent=SOP.sales, expected_output="Ventes.")
+            t3 = Task(description=f"Supply: Gère goulots {t_p}.", agent=SOP.supply, expected_output="Production.")
+            t4 = Task(description=f"Achats: Risques {t_f}.", agent=SOP.purchasing, expected_output="Achats.")
+            t5 = Task(description=f"Finance: Profit {t_f}.", agent=SOP.finance, expected_output="Finance.")
+            t6 = Task(description=f"Directeur: Arbitre PIC pour {contexte_sim}. FINIR PAR UN TABLEAU.", agent=SOP.orchestrator, expected_output="Plan Final.")
 
-            crew = Crew(agents=[SOP.marketing, SOP.sales, SOP.supply, SOP.purchasing, SOP.finance, SOP.orchestrator], tasks=[t1, t2, t3, t4, t5, t6])
+            crew = Crew(agents=[SOP.marketing, SOP.sales, SOP.supply, SOP.purchasing, SOP.finance, SOP.orchestrator], tasks=[t1,t2,t3,t4,t5,t6])
             crew.kickoff()
 
             st.session_state['outputs'] = {
-                "📢 Marketing": t1.output.raw, "🤝 Ventes": t2.output.raw,
-                "🏗️ Supply": t3.output.raw, "📦 Achats": t4.output.raw,
-                "💰 Finance": t5.output.raw, "🏆 Rapport Final": t6.output.raw
+                "📢 Marketing": t1.output.raw, "🤝 Ventes": t2.output.raw, "🏗️ Supply": t3.output.raw,
+                "📦 Achats": t4.output.raw, "💰 Finance": t5.output.raw, "🏆 Rapport Final": t6.output.raw
             }
             st.session_state['run_done'] = True
-        finally:
-            sys.stdout = sys.__stdout__
+        finally: sys.stdout = sys.__stdout__
 
-    # --- CONSULTATION ---
+    # --- CONSULTATION DES RAPPORTS ---
     if st.session_state.get('run_done'):
         st.markdown("---")
-        choix = st.multiselect("Rapports à afficher :", options=list(st.session_state['outputs'].keys()), default=["🏆 Rapport Final"])
+        choix = st.multiselect("Afficher les rapports :", options=list(st.session_state['outputs'].keys()), default=["🏆 Rapport Final"])
         for r in choix:
             with st.expander(f"Consulter {r}", expanded=True):
                 st.markdown(st.session_state['outputs'][r])
