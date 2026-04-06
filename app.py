@@ -102,7 +102,7 @@ if uploaded_file is not None:
               df_p_ia = df_prod_sim.head(10)
               df_f_ia = df_fin_sim.head(10)
               instruction_focus = "l'ensemble du catalogue (Top 10)"
-         else:
+          else:
               df_m_ia = df_mkt_sim[df_mkt_sim['Produit'] == selected_prod]
               df_p_ia = df_prod_sim[df_prod_sim['Produit'] == selected_prod]
               df_f_ia = df_fin_sim[df_fin_sim['Produit'] == selected_prod]
