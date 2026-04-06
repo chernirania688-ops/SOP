@@ -19,6 +19,7 @@ class StreamlitRedirect:
     def flush(self): pass
 
 st.set_page_config(page_title="S&OP AI Simulator", layout="wide", page_icon="🏭")
+
 # --- BARRE LATÉRALE ---
 st.sidebar.title("🛠️ Configuration")
 with st.sidebar.expander("📖 Format Excel Requis", expanded=False):
@@ -26,9 +27,6 @@ with st.sidebar.expander("📖 Format Excel Requis", expanded=False):
     st.write("Onglet **Production**: Produit, Capacity, Stock_Level")
     st.write("Onglet **Finance_Achats**: Produit, Material_Cost, Margin_Unit, Supplier_LeadTime")
 
-
-
-# --- SIDEBAR ET CHARGEMENT ---
 uploaded_file = st.sidebar.file_uploader("📥 Charger SOP_Data.xlsx", type=['xlsx'])
 
 if uploaded_file is not None:
@@ -37,16 +35,20 @@ if uploaded_file is not None:
         df_mkt = pd.read_excel(xls, 'Demande')
         df_prod = pd.read_excel(xls, 'Production')
         df_fin = pd.read_excel(xls, 'Finance_Achats')
-        for df in [df_mkt, df_prod, df_fin]: df.columns = df.columns.str.strip()
+        for df in [df_mkt, df_prod, df_fin]: 
+            df.columns = df.columns.str.strip()
     except Exception as e:
-        st.error(f"❌ Erreur : {e}"); st.stop()
+        st.error(f"❌ Erreur : {e}")
+        st.stop()
 
     st.title("🏭 Pilotage Stratégique & Simulateur S&OP")
     
     # --- FILTRE PRODUIT ---
     selected_prod = st.selectbox("🔍 Analyser un produit spécifique :", ["Tous les produits"] + list(df_mkt['Produit'].unique()))
     
-    df_mkt_sim = df_mkt.copy(); df_prod_sim = df_prod.copy(); df_fin_sim = df_fin.copy()
+    df_mkt_sim = df_mkt.copy()
+    df_prod_sim = df_prod.copy()
+    df_fin_sim = df_fin.copy()
     contexte_sim = "SITUATION NORMALE"
 
     # --- SIMULATEUR ---
@@ -91,66 +93,75 @@ if uploaded_file is not None:
                               color_continuous_scale='RdYlGn', title="Répartition de la Marge")
         st.plotly_chart(fig_tree, use_container_width=True)
 
-    
-      # --- 3. LANCEMENT IA ---
-        st.markdown("---")
-        if st.button(f"🚀 Lancer l'Analyse pour {selected_prod}", use_container_width=True):
-             
-            # On définit le focus AVANT de l'afficher dans st.info
-          if selected_prod == "Tous les produits":
-              df_m_ia = df_mkt_sim.head(10)
-              df_p_ia = df_prod_sim.head(10)
-              df_f_ia = df_fin_sim.head(10)
-              instruction_focus = "l'ensemble du catalogue (Top 10)"
-          else:
-              df_m_ia = df_mkt_sim[df_mkt_sim['Produit'] == selected_prod]
-              df_p_ia = df_prod_sim[df_prod_sim['Produit'] == selected_prod]
-              df_f_ia = df_fin_sim[df_fin_sim['Produit'] == selected_prod]
-              instruction_focus = f"uniquement le produit {selected_prod}"
-    
+    # --- 3. LANCEMENT IA ---
+    st.markdown("---")
+    if st.button(f"🚀 Lancer l'Analyse pour {selected_prod}", use_container_width=True):
+        
+        # Définition du focus et des données IA
+        if selected_prod == "Tous les produits":
+            df_m_ia = df_mkt_sim
+            df_p_ia = df_prod_sim
+            df_f_ia = df_fin_sim
+            instruction_focus = "l'ensemble du catalogue (Top 10)"
+        else:
+            df_m_ia = df_mkt_sim[df_mkt_sim['Produit'] == selected_prod]
+            df_p_ia = df_prod_sim[df_prod_sim['Produit'] == selected_prod]
+            df_f_ia = df_fin_sim[df_fin_sim['Produit'] == selected_prod]
+            instruction_focus = f"uniquement le produit {selected_prod}"
+
         st.info(f"🧠 Analyse EXCLUSIVE pour : {instruction_focus}")
         log_placeholder = st.empty()
         redir = StreamlitRedirect(log_placeholder)
         sys.stdout = redir
             
-         try:
-             # Conversion des données filtrées en texte pour l'IA
-             txt_m = df_m_ia.to_string(index=False)
-             txt_p = df_p_ia.to_string(index=False)
-             txt_f = df_f_ia.to_string(index=False)
+        try:
+            # Conversion des données filtrées en texte pour l'IA
+            txt_m = df_m_ia.to_string(index=False)
+            txt_p = df_p_ia.to_string(index=False)
+            txt_f = df_f_ia.to_string(index=False)
 
             # DÉFINITION DES TÂCHES
-            
-
-            t1 = Task(description=f"Marketing: Analyse la Demande pour {instruction_focus}.Donnees: {t_m}.Identifie les produits stratégique.INTERDICTION de parler d'un autre produit. Si tu ne vois qu'une ligne, analyse cette ligne uniquement.", agent=SOP.marketing, expected_output="Analyse.")
-            t2 = Task(description="Ventes: Valide volumes pour {instruction_focus}.Signale les risques de perte de CA.", agent=SOP.sales, expected_output="Ventes.")
-            t3 = Task(description=f"Supply: Gère goulots pour {instruction_focus}.Donnees: {t_p}.Pour chaque 'Goulot' ou 'Maintenance',propose une solution concréte.", agent=SOP.supply, expected_output="Production.")
-            t4 = Task(description=f"Achats: Risques pour {instruction_focus}.Basé sur {t_f}.Liste les 3 plus gros risques fournisseurs.", agent=SOP.purchasing, expected_output="Achats.")
-            t5 = Task(description=f"Finance:  Calcule le profit pour {instruction_focus}.Basé sur {t_f}.", agent=SOP.finance, expected_output="Finance.")
+            t1 = Task(description=f"Marketing: Analyse la Demande pour {instruction_focus}. Donnees: {txt_m}. Identifie les produits stratégique. INTERDICTION de parler d'un autre produit. Si tu ne vois qu'une ligne, analyse cette ligne uniquement.", agent=SOP.marketing, expected_output="Analyse.")
+            t2 = Task(description=f"Ventes: Valide volumes pour {instruction_focus}. Signale les risques de perte de CA.", agent=SOP.sales, expected_output="Ventes.")
+            t3 = Task(description=f"Supply: Gère goulots pour {instruction_focus}. Donnees: {txt_p}. Pour chaque 'Goulot' ou 'Maintenance', propose une solution concréte.", agent=SOP.supply, expected_output="Production.")
+            t4 = Task(description=f"Achats: Risques pour {instruction_focus}. Basé sur {txt_f}. Liste les 3 plus gros risques fournisseurs.", agent=SOP.purchasing, expected_output="Achats.")
+            t5 = Task(description=f"Finance: Calcule le profit pour {instruction_focus}. Basé sur {txt_f}.", agent=SOP.finance, expected_output="Finance.")
             t6 = Task(
-                        description=f"""Directeur S&OP: Rédige la décision finale pour {instruction_focus} face au scénario: {contexte_sim}.
-                        TU DOIS ABSOLUMENT SUIVRE CE PLAN :
-                        1. SYNTHÈSE DE LA SITUATION : Rappelle le scénario et le risque majeur.
-                        2. ANALYSE OFFRE/DEMANDE : Résume les points bloquants (Goulots, Lead Times).
-                        3. IMPACT FINANCIER : Chiffre la perte ou le gain potentiel.
-                        4. TABLEAU DE DÉCISION : Fais un tableau Markdown avec les colonnes 
-                           | Produit | Décision | Action Supply | Impact Marge |
-                        5. CONCLUSION : Donne ton feu vert ou tes réserves sur le plan.""",
-                        agent=SOP.orchestrator, 
-                        expected_output="Plan S&OP Final structuré en 5 points avec tableau."
+                description=f"""Directeur S&OP: Rédige la décision finale pour {instruction_focus} face au scénario: {contexte_sim}.
+                TU DOIS ABSOLUMENT SUIVRE CE PLAN :
+                1. SYNTHÈSE DE LA SITUATION : Rappelle le scénario et le risque majeur.
+                2. ANALYSE OFFRE/DEMANDE : Résume les points bloquants (Goulots, Lead Times).
+                3. IMPACT FINANCIER : Chiffre la perte ou le gain potentiel.
+                4. TABLEAU DE DÉCISION : Fais un tableau Markdown avec les colonnes 
+                   | Produit | Décision | Action Supply | Impact Marge |
+                5. CONCLUSION : Donne ton feu vert ou tes réserves sur le plan.""",
+                agent=SOP.orchestrator, 
+                expected_output="Plan S&OP Final structuré en 5 points avec tableau."
             )
-            crew = Crew(agents=[SOP.marketing, SOP.sales, SOP.supply, SOP.purchasing, SOP.finance, SOP.orchestrator], tasks=[t1,t2,t3,t4,t5,t6],
-                       memory=False, 
-                       cache=False,  
-                       verbose=True)
+
+            crew = Crew(
+                agents=[SOP.marketing, SOP.sales, SOP.supply, SOP.purchasing, SOP.finance, SOP.orchestrator], 
+                tasks=[t1, t2, t3, t4, t5, t6],
+                memory=False, 
+                cache=False,  
+                verbose=True
+            )
+            
             crew.kickoff()
 
             st.session_state['outputs'] = {
-                "📢 Marketing": t1.output.raw, "🤝 Ventes": t2.output.raw, "🏗️ Supply": t3.output.raw,
-                "📦 Achats": t4.output.raw, "💰 Finance": t5.output.raw, "🏆 Rapport Final": t6.output.raw
+                "📢 Marketing": t1.output.raw, 
+                "🤝 Ventes": t2.output.raw, 
+                "🏗️ Supply": t3.output.raw,
+                "📦 Achats": t4.output.raw, 
+                "💰 Finance": t5.output.raw, 
+                "🏆 Rapport Final": t6.output.raw
             }
             st.session_state['run_done'] = True
-        finally: sys.stdout = sys.__stdout__
+        except Exception as e:
+            st.error(f"Erreur IA : {e}")
+        finally: 
+            sys.stdout = sys.__stdout__
 
     # --- CONSULTATION DES RAPPORTS ---
     if st.session_state.get('run_done'):
