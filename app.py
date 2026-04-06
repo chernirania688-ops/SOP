@@ -91,14 +91,17 @@ if uploaded_file is not None:
                               color_continuous_scale='RdYlGn', title="Répartition de la Marge")
         st.plotly_chart(fig_tree, use_container_width=True)
 
-    # --- LANCEMENT IA (Pleine Largeur) ---
+    
+    # --- 3. LANCEMENT IA ---
     st.markdown("---")
-    if st.button("🚀 Lancer le Processus S&OP Collaboratif", use_container_width=True):
+    if st.button(f"🚀 Lancer l'Analyse pour {selected_prod}", use_container_width=True):
         st.info(f"🧠 Analyse EXCLUSIVE pour : {instruction_focus}")
         log_placeholder = st.empty()
-        redir = StreamlitRedirect(log_placeholder); sys.stdout = redir
+        redir = StreamlitRedirect(log_placeholder)
+        sys.stdout = redir
+        
         try:
-            # FILTRAGE IA (Correction de la NameError ici)
+            # --- LOGIQUE DE FILTRAGE IA ---
             if selected_prod == "Tous les produits":
                 df_m_ia = df_mkt_sim
                 df_p_ia = df_prod_sim
@@ -108,7 +111,7 @@ if uploaded_file is not None:
                 df_m_ia = df_mkt_sim[df_mkt_sim['Produit'] == selected_prod]
                 df_p_ia = df_prod_sim[df_prod_sim['Produit'] == selected_prod]
                 df_f_ia = df_fin_sim[df_fin_sim['Produit'] == selected_prod]
-               instruction_focus = f"uniquement le produit {selected_prod}"
+                instruction_focus = f"uniquement le produit {selected_prod}"
 
             txt_m = df_m_ia.to_string(index=False)
             txt_p = df_p_ia.to_string(index=False)
