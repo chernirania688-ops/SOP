@@ -115,8 +115,7 @@ if uploaded_file is not None:
                         3. IMPACT FINANCIER : Chiffre la perte ou le gain potentiel.
                         4. TABLEAU DE DÉCISION : Fais un tableau Markdown avec les colonnes 
                            | Produit | Décision | Action Supply | Impact Marge |
-                        5. Actions face à l'événement simulé.
-                        6. CONCLUSION : Donne ton feu vert ou tes réserves sur le plan.""",
+                        5. CONCLUSION : Donne ton feu vert ou tes réserves sur le plan.""",
                         agent=SOP.orchestrator, 
                         expected_output="Plan S&OP Final structuré en 5 points avec tableau."
             )
