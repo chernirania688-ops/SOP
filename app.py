@@ -100,18 +100,15 @@ if uploaded_file is not None:
             t3 = Task(description=f"Supply: Gère goulots {t_p}.Pour chaque 'Goulot' ou 'Maintenance',propose une solution concréte.", agent=SOP.supply, expected_output="Production.")
             t4 = Task(description=f"Achats: Risques {t_f}.Liste les 3 plus gros risques fournisseurs.", agent=SOP.purchasing, expected_output="Achats.")
             t5 = Task(description=f"Finance:  Calcule le profit {t_f}.", agent=SOP.finance, expected_output="Finance.")
-            t6 = Task(
-                description=f"""Rédige le Plan S&OP Stratégique pour {focus_label} face au scénario {contexte_sim}.
+            t6 = Task(description=f"Directeur S&OP: Rédige la décision finale pour le scénario pour {contexte_sim}.
                 TU DOIS ABSOLUMENT SUIVRE CE PLAN :
                 1. SYNTHÈSE DE LA SITUATION : Rappelle le scénario et le risque majeur.
                 2. ANALYSE OFFRE/DEMANDE : Résume les points bloquants (Goulots, Lead Times).
                 3. IMPACT FINANCIER : Chiffre la perte ou le gain potentiel.
                 4. TABLEAU DE DÉCISION : Fais un tableau Markdown avec les colonnes 
                    | Produit | Décision | Action Supply | Impact Marge |
-                5. CONCLUSION : Donne ton feu vert ou tes réserves sur le plan.""",
-                agent=SOP.orchestrator,
-                expected_output="Rapport S&OP structuré avec tableau de synthèse."
-            )
+                5. CONCLUSION : Donne ton feu vert ou tes réserves sur le plan.",
+                agent=SOP.orchestrator, expected_output="Plan Final.")
             crew = Crew(agents=[SOP.marketing, SOP.sales, SOP.supply, SOP.purchasing, SOP.finance, SOP.orchestrator], tasks=[t1,t2,t3,t4,t5,t6],
                        memory=False, 
                        cache=False,  
