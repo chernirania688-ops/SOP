@@ -71,14 +71,18 @@ if uploaded_file is not None:
 
     col_g1, col_g2 = st.columns(2)
     with col_g1:
-        fig = go.Figure()
-        fig.add_trace(go.Bar(x=v_prod['Produit'], y=v_prod['Capacity'], name='Capacité', marker_color='#2ecc71', opacity=0.6))
-        fig.add_trace(go.Bar(x=v_mkt['Produit'], y=v_mkt['Forecast'], name='Demande', marker_color='#e74c3c', width=0.4))
-        fig.update_layout(title="Équilibre Offre/Demande", barmode='overlay')
-        st.plotly_chart(fig, use_container_width=True)
+        fig_bal = go.Figure()
+        fig_bal.add_trace(go.Bar(x=v_prod['Produit'], y=v_prod['Capacity'], name='Capacité', marker_color='#2ecc71', opacity=0.6))
+        fig_bal.add_trace(go.Bar(x=v_mkt['Produit'], y=v_mkt['Forecast'], name='Demande', marker_color='#e74c3c', width=0.4))
+        fig_bal.update_layout(title="Équilibre Offre/Demande", barmode='overlay', height=400)
+        st.plotly_chart(fig_bal, use_container_width=True)
+
     with col_g2:
-        df_p = pd.merge(v_mkt, v_fin, on='Produit'); df_p['M_Totale'] = df_p['Forecast'] * df_p['Margin_Unit']
-        st.plotly_chart(px.treemap(df_p, path=['Produit'], values='M_Totale', title="Répartition Marge"), use_container_width=True)
+        df_profit = pd.merge(v_mkt, v_fin, on='Produit')
+        df_profit['Marge_Totale'] = df_profit['Forecast'] * df_profit['Margin_Unit']
+        fig_tree = px.treemap(df_profit, path=['Produit'], values='Marge_Totale', color='Margin_Unit',
+                              color_continuous_scale='RdYlGn', title="Répartition de la Marge")
+        st.plotly_chart(fig_tree, use_container_width=True)
 
     # --- LANCEMENT IA (Pleine Largeur) ---
     st.markdown("---")
@@ -91,12 +95,12 @@ if uploaded_file is not None:
             # Réduction data pour Rate Limit
             t_m = df_mkt_sim.head(10).to_string(); t_p = df_prod_sim.head(10).to_string(); t_f = df_fin.head(10).to_string()
 
-            t1 = Task(description=f"Marketing: Analyse {t_m}.", agent=SOP.marketing, expected_output="Analyse.")
-            t2 = Task(description="Ventes: Valide volumes.", agent=SOP.sales, expected_output="Ventes.")
-            t3 = Task(description=f"Supply: Gère goulots {t_p}.", agent=SOP.supply, expected_output="Production.")
-            t4 = Task(description=f"Achats: Risques {t_f}.", agent=SOP.purchasing, expected_output="Achats.")
-            t5 = Task(description=f"Finance: Profit {t_f}.", agent=SOP.finance, expected_output="Finance.")
-            t6 = Task(description=f"Directeur: Arbitre PIC pour {contexte_sim}. FINIR PAR UN TABLEAU.", agent=SOP.orchestrator, expected_output="Plan Final.")
+            t1 = Task(description=f"Marketing: Analyse la Demande {t_m}.Identifie les produits stratégique.", agent=SOP.marketing, expected_output="Analyse.")
+            t2 = Task(description="Ventes: Valide volumes.Signale les risques de perte de CA.", agent=SOP.sales, expected_output="Ventes.")
+            t3 = Task(description=f"Supply: Gère goulots {t_p}.Pour chaque 'Goulot' ou 'Maintenance',propose une solution concréte.", agent=SOP.supply, expected_output="Production.")
+            t4 = Task(description=f"Achats: Risques {t_f}.Liste les 3 plus gros risques fournisseurs.", agent=SOP.purchasing, expected_output="Achats.")
+            t5 = Task(description=f"Finance:  Calcule le profit {t_f}.", agent=SOP.finance, expected_output="Finance.")
+            t6 = Task(description=f"Directeur S&OP: Rédige la décision finale pour le scénario pour {contexte_sim}. FINIR PAR UN TABLEAU avec les colonnes suivantes|Produit|Décision(maintenir/réduire/augmenter)|Solution Industrielle|Impact Marge|.", agent=SOP.orchestrator, expected_output="Plan Final.")
 
             crew = Crew(agents=[SOP.marketing, SOP.sales, SOP.supply, SOP.purchasing, SOP.finance, SOP.orchestrator], tasks=[t1,t2,t3,t4,t5,t6])
             crew.kickoff()
