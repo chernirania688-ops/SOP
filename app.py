@@ -93,32 +93,27 @@ if uploaded_file is not None:
 
     # --- LANCEMENT IA (Pleine Largeur) ---
     st.markdown("---")
-    if st.button("🚀 Lancer le Processus S&OP Collaboratif", use_container_width=True):
-      # --- RESET DES ANCIENS RAPPORTS ---
-        if 'outputs' in st.session_state:
-            del st.session_state['outputs']
-
-        # --- FILTRAGE STRICT ---
-        if selected_prod == "Tous les produits":
-            txt_m = df_mkt_sim.to_string()
-            txt_p = df_prod_sim.to_string()
-            txt_f = df_fin_sim.to_string()
-            instruction_focus= "l'ensemble du catalogue"
-        else:
-            # On force le DataFrame à ne contenir qu'une seule ligne
-            txt_m = df_mkt_sim[df_mkt_sim['Produit'] == selected_prod].to_string()
-            txt_p = df_prod_sim[df_prod_sim['Produit'] == selected_prod].to_string()
-            txt_f = df_fin_sim[df_fin_sim['Produit'] == selected_prod].to_string()
-            instruction_focus = f"UNIQUEMENT le produit '{selected_prod}'"
-         # Conversion en texte pour l'IA
-        txt_m = df_m_ia.to_string(index=False)
-        txt_p = df_p_ia.to_string(index=False)
-        txt_f = df_f_ia.to_string(index=False)
-
+    if st.button("🚀 Lancer le Processus S&OP Collaboratif", use_container_width=True)
         st.info(f"🧠 Analyse EXCLUSIVE pour : {instruction_focus}")
         log_placeholder = st.empty()
         redir = StreamlitRedirect(log_placeholder); sys.stdout = redir
-        
+         try:
+            # FILTRAGE IA (Correction de la NameError ici)
+            if selected_prod == "Tous les produits":
+                df_m_ia = df_mkt_sim
+                df_p_ia = df_prod_sim
+                df_f_ia = df_fin_sim
+                instruction_focus = "l'ensemble du catalogue"
+            else:
+                df_m_ia = df_mkt_sim[df_mkt_sim['Produit'] == selected_prod]
+                df_p_ia = df_prod_sim[df_prod_sim['Produit'] == selected_prod]
+                df_f_ia = df_fin_sim[df_fin_sim['Produit'] == selected_prod]
+               instruction_focus = f"uniquement le produit {selected_prod}"
+
+            txt_m = df_m_ia.to_string(index=False)
+            txt_p = df_p_ia.to_string(index=False)
+            txt_f = df_f_ia.to_string(index=False)
+
         try:
             # Réduction data pour Rate Limit
             t_m = df_mkt_sim.head(10).to_string(); t_p = df_prod_sim.head(10).to_string(); t_f = df_fin.head(10).to_string()
