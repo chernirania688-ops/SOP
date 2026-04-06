@@ -151,7 +151,7 @@ if uploaded_file is not None:
         st.session_state['outputs'] = {
             "📢 Marketing": t1.output.raw, "🤝 Ventes": t2.output.raw,
             "🏗️ Supply": t3.output.raw, "📦 Achats": t4.output.raw,
-            "💰 Finance": t5.output.raw, "🏆 RAPPORT FINAL ": t6.output.raw
+            "💰 Finance": t5.output.raw, "🏆 Rapport Final ": t6.output.raw
         }
         st.session_state['run_done'] = True
     finally:
