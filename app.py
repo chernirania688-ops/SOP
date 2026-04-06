@@ -94,18 +94,17 @@ if uploaded_file is not None:
     # --- LANCEMENT IA (Pleine Largeur) ---
     st.markdown("---")
     if st.button("🚀 Lancer le Processus S&OP Collaboratif", use_container_width=True):
+       # 1. Préparation des données filtrées
         if selected_prod == "Tous les produits":
-                # On garde le top 10 pour l'analyse globale
-                txt_m = df_mkt_sim.to_string()
-                txt_p = df_prod_sim.to_string()
-                txt_f = df_fin_sim.to_string()
-                scope_ia = "l'ensemble du catalogue "
-            else:
-                # On filtre les tableaux pour n'envoyer QUE la ligne du produit sélectionné
-                txt_m = df_mkt_sim[df_mkt_sim['Produit'] == selected_prod].to_string()
-                txt_p = df_prod_sim[df_prod_sim['Produit'] == selected_prod].to_string()
-                txt_f = df_fin_sim[df_fin_sim['Produit'] == selected_prod].to_string()
-                scope_ia = f"uniquement le produit {selected_prod}"
+            txt_m = df_mkt_sim.to_string()
+            txt_p = df_prod_sim.to_string()
+            txt_f = df_fin_sim.to_string()
+            scope_ia = "l'ensemble du catalogue"
+        else:
+            txt_m = df_mkt_sim[df_mkt_sim['Produit'] == selected_prod].to_string()
+            txt_p = df_prod_sim[df_prod_sim['Produit'] == selected_prod].to_string()
+            txt_f = df_fin_sim[df_fin_sim['Produit'] == selected_prod].to_string()
+            scope_ia = f"uniquement le produit {selected_prod}"
         st.info("🧠 Les 6 agents négocient sur toute la page...")
         log_placeholder = st.empty()
         redir = StreamlitRedirect(log_placeholder); sys.stdout = redir
