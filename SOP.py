@@ -1,38 +1,77 @@
 import streamlit as st
 from crewai import Agent, LLM
 
-# --- 1. DÉFINITION DU LLM (8B-Instant pour la stabilité) ---
+# =================================================================
+# 1. DÉFINITION DU CERVEAU (Variable : cerveau_local)
+# =================================================================
+
+# Cette logique permet de basculer entre Groq (Cloud) et Ollama (Local)
 if "GROQ_API_KEY" in st.secrets:
+    # Si on est sur Streamlit Cloud (Utilise Groq)
     cerveau_local = LLM(
-        model="groq/llama-3.1-8b-instant", 
+        model="groq/llama-3.3-70b-versatile",
         api_key=st.secrets["GROQ_API_KEY"]
     )
 else:
-    cerveau_local = LLM(model="ollama/llama3.1:8b", base_url="http://localhost:11434")
+    # Si on est sur votre PC (Utilise Ollama)
+    cerveau_local = LLM(
+        model="ollama/llama3.2:1b",
+        base_url="http://localhost:11434"
+    )
 
-# --- 2. DÉFINITION DES 3 SUPER-AGENTS ---
-# On fusionne les rôles pour réduire les appels API
+# =================================================================
+# 2. DÉFINITION DES AGENTS (Vérifiez qu'ils utilisent bien cerveau_local)
+# =================================================================
 
-demand_expert = Agent(
-    role='Directeur Demande et Ventes',
-    goal='Analyser les tendances marketing et valider les volumes de ventes terrain.',
-    backstory='Tu es l expert qui réconcilie les prévisions marketing et la réalité des commandes.',
-    llm=cerveau_local, verbose=True, allow_delegation=False, max_rpm=1
+marketing = Agent(
+    role='Analyste Marketing',
+    goal='Extraire les tendances de l onglet Demande.',
+    backstory='Tu es un expert en chiffres. Réponds toujours en français.',
+    llm=cerveau_local,
+    verbose=True
 )
 
-ops_expert = Agent(
-    role='Directeur des Opérations et Achats',
-    goal='Optimiser la production usine et sécuriser les approvisionnements fournisseurs.',
-    backstory='Tu gères les goulots d usine et les risques de rupture matières premières.',
-    llm=cerveau_local, verbose=True, allow_delegation=False, max_rpm=1
+sales = Agent(
+    role='Responsable des Ventes',
+    goal='Valider les volumes de vente finaux.',
+    backstory='Tu compares le Forecast et les Orders. Réponds toujours en français.',
+    llm=cerveau_local,
+    verbose=True
 )
 
-ceo_expert = Agent(
-    role='Directeur Stratégique et Financier (CFO/COO)',
-    goal='Arbitrer le plan final pour maximiser le profit et rédiger le rapport PIC.',
-    backstory='Tu décides des arbitrages finaux en fonction de la rentabilité et de la stratégie.',
-    llm=cerveau_local, verbose=True, allow_delegation=False, max_rpm=1
+supply = Agent(
+    role='Planificateur de Production',
+    goal='Comparer les besoins de vente avec la capacité réelle de l usine.',
+    backstory='Tu es ingénieur en production. Réponds toujours en français.',
+    llm=cerveau_local,
+    verbose=True
 )
 
+purchasing = Agent(
+    role='Acheteur Industriel',
+    goal='Identifier les risques de rupture basés sur les délais fournisseurs.',
+    backstory='Tu analyses les Lead Times. Réponds toujours en français.',
+    llm=cerveau_local,
+    verbose=True
+)
+
+finance = Agent(
+    role='Contrôleur de Gestion Industriel',
+    goal='Calculer la rentabilité financière globale (Volume x Marge).',
+    backstory="""Tu es un expert en calcul de coûts. Tu ne te contentes pas d'additionner les marges unitaires. 
+    Tu multiplies CHAQUE volume validé par sa marge unitaire pour donner le profit total en euros. 
+    Tu es très précis avec les chiffres.""",
+    llm=cerveau_local, verbose=True
+)
+
+orchestrator = Agent(
+    role='Directeur S&OP (COO)',
+    goal='Piloter la performance globale et valider le Plan Industriel et Commercial (PIC).',
+    backstory="""Tu es le garant de la stratégie. Ton rapport final doit être structuré, 
+    professionnel et inclure des indicateurs clés (KPIs). Tu arbitres les conflits en favorisant 
+    les produits à plus forte marge quand la capacité manque.""",
+    llm=cerveau_local, verbose=True
+)
+# Empêche l'exécution automatique lors de l'import
 if __name__ == "__main__":
-    print("Module SOP prêt avec Super-Agents.")
+    print("Le module SOP est prêt.")
