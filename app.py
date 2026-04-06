@@ -117,7 +117,7 @@ if uploaded_file is not None:
             txt_p = df_p_ia.to_string(index=False)
             txt_f = df_f_ia.to_string(index=False)
 
-        try:
+         try:
             # Réduction data pour Rate Limit
             t_m = df_mkt_sim.head(10).to_string(); t_p = df_prod_sim.head(10).to_string(); t_f = df_fin.head(10).to_string()
 
