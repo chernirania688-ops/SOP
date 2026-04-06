@@ -120,8 +120,7 @@ if uploaded_file is not None:
                 txt_f = df_f_ia.to_string(index=False)
 
             # DÉFINITION DES TÂCHES
-            # Réduction data pour Rate Limit
-            t_m = df_mkt_sim.head(10).to_string(); t_p = df_prod_sim.head(10).to_string(); t_f = df_fin.head(10).to_string()
+            
 
             t1 = Task(description=f"Marketing: Analyse la Demande pour {instruction_focus}.Donnees: {t_m}.Identifie les produits stratégique.INTERDICTION de parler d'un autre produit. Si tu ne vois qu'une ligne, analyse cette ligne uniquement.", agent=SOP.marketing, expected_output="Analyse.")
             t2 = Task(description="Ventes: Valide volumes pour {instruction_focus}.Signale les risques de perte de CA.", agent=SOP.sales, expected_output="Ventes.")
