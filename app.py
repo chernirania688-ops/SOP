@@ -97,7 +97,7 @@ if uploaded_file is not None:
         st.info(f"🧠 Analyse EXCLUSIVE pour : {instruction_focus}")
         log_placeholder = st.empty()
         redir = StreamlitRedirect(log_placeholder); sys.stdout = redir
-         try:
+        try:
             # FILTRAGE IA (Correction de la NameError ici)
             if selected_prod == "Tous les produits":
                 df_m_ia = df_mkt_sim
