@@ -20,6 +20,7 @@ class StreamlitRedirect:
 
 st.set_page_config(page_title="S&OP AI Simulator", layout="wide", page_icon="🏭")
 # --- BARRE LATÉRALE ---
+st.sidebar.title("🛠️ Configuration")
 with st.sidebar.expander("📖 Format Excel Requis", expanded=False):
     st.write("Onglet **Demande**: Produit, Marketing_Forecast, Sales_Orders")
     st.write("Onglet **Production**: Produit, Capacity, Stock_Level")
@@ -29,7 +30,6 @@ uploaded_file = st.sidebar.file_uploader("📥 Charger SOP_Data.xlsx", type=['xl
 
 
 # --- SIDEBAR ET CHARGEMENT ---
-st.sidebar.title("🛠️ Configuration")
 uploaded_file = st.sidebar.file_uploader("📥 Charger SOP_Data.xlsx", type=['xlsx'])
 
 if uploaded_file is not None:
