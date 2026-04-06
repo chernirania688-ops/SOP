@@ -93,7 +93,7 @@ if uploaded_file is not None:
 
     # --- LANCEMENT IA (Pleine Largeur) ---
     st.markdown("---")
-    if st.button("🚀 Lancer le Processus S&OP Collaboratif", use_container_width=True)
+    if st.button("🚀 Lancer le Processus S&OP Collaboratif", use_container_width=True):
         st.info(f"🧠 Analyse EXCLUSIVE pour : {instruction_focus}")
         log_placeholder = st.empty()
         redir = StreamlitRedirect(log_placeholder); sys.stdout = redir
