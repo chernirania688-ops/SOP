@@ -102,7 +102,10 @@ if uploaded_file is not None:
             t5 = Task(description=f"Finance:  Calcule le profit {t_f}.", agent=SOP.finance, expected_output="Finance.")
             t6 = Task(description=f"Directeur S&OP: Rédige la décision finale pour le scénario pour {contexte_sim}. FINIR PAR UN TABLEAU avec les colonnes suivantes|Produit|Décision(maintenir/réduire/augmenter)|Solution Industrielle|Impact Marge|.", agent=SOP.orchestrator, expected_output="Plan Final.")
 
-            crew = Crew(agents=[SOP.marketing, SOP.sales, SOP.supply, SOP.purchasing, SOP.finance, SOP.orchestrator], tasks=[t1,t2,t3,t4,t5,t6])
+            crew = Crew(agents=[SOP.marketing, SOP.sales, SOP.supply, SOP.purchasing, SOP.finance, SOP.orchestrator], tasks=[t1,t2,t3,t4,t5,t6]
+                       memory=False, 
+                       cache=False,  
+                       verbose=True)
             crew.kickoff()
 
             st.session_state['outputs'] = {
