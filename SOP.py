@@ -1,7 +1,7 @@
 import streamlit as st
 from crewai import Agent, LLM
 
-# --- 1. DÉFINITION DU CERVEAU (Modèle 8B pour supporter 6 agents) ---
+# --- 1. DÉFINITION DU CERVEAU ---
 if "GROQ_API_KEY" in st.secrets:
     cerveau_local = LLM(
         model="groq/llama-3.1-8b-instant", 
@@ -11,48 +11,47 @@ else:
     cerveau_local = LLM(model="ollama/llama3.1:8b", base_url="http://localhost:11434")
 
 # --- 2. DÉFINITION DES 6 AGENTS ---
-
 marketing = Agent(
-    role='Analyste Marketing',
-    goal='Extraire les tendances de demande.',
-    backstory='Expert en prévisions et image de marque.',
-    llm=cerveau_local, verbose=True, allow_delegation=False, max_rpm=1
+    role='Directeur Marketing Stratégique',
+    goal='Analyser la demande et définir les priorités de marque.',
+    backstory="Tu es le gardien de l'image de marque. On ne supprime JAMAIS les Smartphones.",
+    llm=cerveau_local, verbose=True, max_rpm=1
 )
 
 sales = Agent(
-    role='Responsable des Ventes',
-    goal='Valider les volumes finaux terrain.',
-    backstory='Garant de la réalité commerciale et des commandes.',
-    llm=cerveau_local, verbose=True, allow_delegation=False, max_rpm=1
+    role='Directeur Commercial',
+    goal='Valider la réalité des ventes.',
+    backstory="Tu compares le Forecast et les Sales_Orders.",
+    llm=cerveau_local, verbose=True, max_rpm=1
 )
 
 supply = Agent(
-    role='Planificateur de Production',
-    goal='Vérifier la faisabilité technique et la capacité.',
-    backstory='Garant des lignes de production et des goulots.',
-    llm=cerveau_local, verbose=True, allow_delegation=False, max_rpm=1
+    role='Directeur Industriel',
+    goal='Résoudre les goulots d étranglement.',
+    backstory="Si Machine_Status est Goulot, tu proposes des solutions.",
+    llm=cerveau_local, verbose=True, max_rpm=1
 )
 
 purchasing = Agent(
-    role='Acheteur Industriel',
-    goal='Identifier les risques fournisseurs et délais.',
-    backstory='Expert en approvisionnements et lead times.',
-    llm=cerveau_local, verbose=True, allow_delegation=False, max_rpm=1
+    role='Responsable Achats',
+    goal='Sécuriser les composants.',
+    backstory="Tu proposes des fournisseurs alternatifs.",
+    llm=cerveau_local, verbose=True, max_rpm=1
 )
 
 finance = Agent(
-    role='Contrôleur de Gestion',
-    goal='Calculer la rentabilité financière globale.',
-    backstory='Garant de la marge et de la santé financière.',
-    llm=cerveau_local, verbose=True, allow_delegation=False, max_rpm=1
+    role='CFO (Directeur Financier)',
+    goal='Maximiser le profit net.',
+    backstory="Tu es obsédé par le Profit Total.",
+    llm=cerveau_local, verbose=True, max_rpm=1
 )
 
 orchestrator = Agent(
-    role='Directeur S&OP (COO)',
-    goal='Arbitrer les conflits et valider le PIC final.',
-    backstory='Décideur final stratégique. Arbitre selon la marge.',
-    llm=cerveau_local, verbose=True, allow_delegation=False, max_rpm=1
+    role='Directeur S&OP',
+    goal='Rédiger le PIC final et trancher les conflits.',
+    backstory="Tu dois obligatoirement produire un Tableau de Synthèse final.",
+    llm=cerveau_local, verbose=True, max_rpm=1
 )
-# Empêche l'exécution automatique lors de l'import
+
 if __name__ == "__main__":
-    print("Le module SOP est prêt.")
+    print("Module SOP prêt.")
