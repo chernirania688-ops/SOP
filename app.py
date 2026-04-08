@@ -121,7 +121,8 @@ if uploaded_file is not None:
             txt_f = df_f_ia.to_string(index=False)
 
             # DÉFINITION DES TÂCHES
-            t1 = Task(description=f"Marketing: Analyse la Demande pour {instruction_focus}. Donnees: {txt_m}. Identifie les produits stratégique. INTERDICTION de parler d'un autre produit. Si tu ne vois qu'une ligne, analyse cette ligne uniquement.", agent=SOP.marketing, expected_output="Analyse.")
+           
+           t1 = Task(description=f"Marketing: Analyse la Demande pour {instruction_focus}. Donnees: {txt_m}. Identifie les produits stratégique. INTERDICTION de parler d'un autre produit. Si tu ne vois qu'une ligne, analyse cette ligne uniquement.", agent=SOP.marketing, expected_output="Analyse.")
             t2 = Task(description=f"Ventes: Valide volumes pour {instruction_focus}. Signale les risques de perte de CA.", agent=SOP.sales, expected_output="Ventes.")
             t3 = Task(description=f"Supply: Gère goulots pour {instruction_focus}. Donnees: {txt_p}. Pour chaque 'Goulot' ou 'Maintenance', propose une solution concréte.", agent=SOP.supply, expected_output="Production.")
             t4 = Task(description=f"Achats: Risques pour {instruction_focus}. Basé sur {txt_f}. Liste les 3 plus gros risques fournisseurs.", agent=SOP.purchasing, expected_output="Achats.")
