@@ -5,7 +5,7 @@ from crewai import Agent, LLM
 if "GROQ_API_KEY" in st.secrets:
     cerveau_local = LLM(
         model="groq/llama-3.1-8b-instant", 
-        api_key=st.secrets["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"]
+        api_key=st.secrets["GROQ_API_KEY"]
     )
 else:
     cerveau_local = LLM(model="ollama/llama3.1:8b", base_url="http://localhost:11434")
